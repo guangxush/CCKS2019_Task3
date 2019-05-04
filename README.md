@@ -2,7 +2,7 @@
 
 ### Task
 
-[Inter-Personal Relationship Extraction]()
+[Inter-Personal Relationship Extraction](https://github.com/guangxush/CCKS2019_Task3/blob/master/documents/CCKS2019-eval-task3.pdf)
 
 
 ### Environment
@@ -19,7 +19,7 @@
 
 |data set |Classification Task|Classes|Train|Test|Date|
 |---------|:---:|:----:|:--:|:--:|:--:|
-|IMDB polarity|Sentiment analysis|2|25000|25000|25000*0.7|
+|Train A|Sentiment analysis|2|25000|25000|25000*0.7|
 
 ### Data Statistics
 
