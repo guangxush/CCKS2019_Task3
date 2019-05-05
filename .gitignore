@@ -11,7 +11,7 @@
 !modfile/README.md
 ~$*
 raw_data/
-modfile
-raw_data
-data/word2vec.train.data
-data/open_data
+modfile/
+raw_data/
+data/
+!data/README.md

@@ -51,6 +51,7 @@ def generate_embedding(level):
 #
 #     model = train_unsupervised(input=os.path.join(data_path, 'corpus_all.txt'), model='skipgram', dim=300, epoch=10,
 #                                minCount=1, wordNgrams=3)
+#     # 暂时没有下载这个包，所以去掉这个方法
 #
 #     vocab = pickle.load(open(os.path.join(data_path, 'vocabulary_all.pkl'), 'rb'))
 #     d = dict([(w, 0) for w in model.get_words()])
