@@ -4,6 +4,9 @@
 
 [Inter-Personal Relationship Extraction](https://github.com/guangxush/CCKS2019_Task3/blob/master/documents/CCKS2019-eval-task3.pdf)
 
+### Competition
+
+[ccks_2019_ipre](https://www.biendata.com/competition/ccks_2019_ipre/)
 
 ### Environment
 - keras
