@@ -16,15 +16,16 @@ class CategoricalMetrics(Callback):
 
     def on_epoch_end(self, epoch, logs={}):
         valid_results = self.model.predict([self.validation_data[0]])
-        if isinstance(valid_results, list):
-            valid_results = valid_results[-1]
-        if valid_results.shape[-1] > 1:
-            valid_y_pred = [np.argmax(valid_result) for valid_result in valid_results]
-        else:
-            valid_y_pred = [valid_result[0] > 0.5 for valid_result in valid_results]
-        valid_y_true = self.validation_data[2]
-        if valid_y_true.shape[-1] > 1:
-            valid_y_true = [np.argmax(y) for y in valid_y_true]
+        valid_y_pred = valid_results
+        # if isinstance(valid_results, list):
+        #     valid_results = valid_results[-1]
+        # if valid_results.shape[-1] > 1:
+        #     valid_y_pred = [np.argmax(valid_result) for valid_result in valid_results]
+        # else:
+        #     valid_y_pred = [valid_result[0] > 0.5 for valid_result in valid_results]
+        valid_y_true = self.validation_data[1]
+        # if valid_y_true.shape[-1] > 1:
+        #     valid_y_true = [np.argmax(y) for y in valid_y_true]
         # _val_f1 = f1_score(valid_y_true, valid_y_pred)
         # 替换成比赛中需要的f1
         _val_f1 = self.new_f1(valid_y_true, valid_y_pred)
