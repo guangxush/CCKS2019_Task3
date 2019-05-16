@@ -15,7 +15,7 @@ class CategoricalMetrics(Callback):
         self.val_aucs = []
 
     def on_epoch_end(self, epoch, logs={}):
-        valid_results = self.model.predict([self.validation_data[0], self.validation_data[1]])
+        valid_results = self.model.predict([self.validation_data[0]])
         if isinstance(valid_results, list):
             valid_results = valid_results[-1]
         if valid_results.shape[-1] > 1:
