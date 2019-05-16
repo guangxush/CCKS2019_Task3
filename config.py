@@ -29,8 +29,8 @@ class Config(object):
         self.vocab_len_word = 29628
         self.vocab_len_char = 88
         self.char_per_word = 10
-        self.embedding_path = "data"
-        self.embedding_file = 'xxx_300_dim_all.'
+        self.embedding_path = "modfile"
+        self.embedding_file = 'sst_100_dim_all.'
         self.embedding_dim = 300
         self.dropout = 0.1
         self.features_len = 0

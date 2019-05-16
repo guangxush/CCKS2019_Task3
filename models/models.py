@@ -8,15 +8,14 @@ from keras.activations import softmax
 from keras import backend as K
 from keras.preprocessing.sequence import pad_sequences
 from keras.models import Model
-from keras.utils import to_categorical
 from models.callbacks import distance_metrics, categorical_metrics
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 
 from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_score, accuracy_score
-
+from keras.utils import to_categorical
 from models.cnn import AttConv1D
 
-import os, codecs
+import os
 import numpy as np
 
 
@@ -49,12 +48,9 @@ class Models(object):
     def __init__(self, config):
         self.config = config
 
-    def init_callbacks(self, distance=False, feature=False, co_ae=False, align=False, adv=False):
-        if distance:
-            self.callbacks.append(distance_metrics)
-        else:
-            self.callbacks.append(categorical_metrics)
+    def init_callbacks(self):
 
+        self.callbacks.append(categorical_metrics)
         self.callbacks.append(
             ModelCheckpoint(
                 filepath=os.path.join(self.config.checkpoint_dir, '%s.hdf5' % self.config.exp_name),
@@ -65,7 +61,6 @@ class Models(object):
                 verbose=self.config.checkpoint_verbose,
             )
         )
-
         self.callbacks.append(
             EarlyStopping(
                 monitor=self.config.early_stopping_monitor,
@@ -212,55 +207,129 @@ class Models(object):
             self.model.compile(loss='binary_crossentropy', optimizer=self.config.optimizer,
                                metrics=['binary_accuracy'])
 
-    def pad(self, x_data_a, x_data_b):
-        return pad_sequences(x_data_a, maxlen=self.config.max_len, padding='post', truncating='post'), \
-               pad_sequences(x_data_b, maxlen=self.config.max_len, padding='post', truncating='post')
+    def cnn(self, pos=False, pi=False):
+        sentence = Input(shape=(self.config.max_len,), dtype='int32', name='sent_base')
+        features = Input(shape=(self.config.features_len,), dtype='float32', name='features')
+        weights = np.load(os.path.join(self.config.embedding_path, 'word_level', self.config.embedding_file))
+        if pi:
+            p = np.zeros(shape=(4, weights.shape[-1]), dtype='float32')
+            weights = np.vstack((weights, p))
+        embedding_layer = Embedding(input_dim=weights.shape[0],
+                                    output_dim=weights.shape[-1],
+                                    weights=[weights], name='embedding_layer', trainable=True)
+        sent_embedding = embedding_layer(sentence)
+        if self.config.level == 'word_char':
+            sentence_char = Input(shape=(self.config.max_len, self.config.char_per_word), dtype='int32',
+                                  name='sent_char_base')
+            weights_char = np.load(os.path.join(self.config.embedding_path, 'char_level', self.config.embedding_file))
+            char_emb = self.char_embedding(weights_char)
+            sent_char_embedding = char_emb(sentence_char)
+            sent_embedding = concatenate([sent_embedding, sent_char_embedding])
+        if pos:
+            pos1 = Input(shape=(self.config.max_len,), dtype='int32', name='pos1')
+            pos2 = Input(shape=(self.config.max_len,), dtype='int32', name='pos2')
 
-    def fit(self, x_train_a, x_train_b, y_train, x_valid_a, x_valid_b, y_valid, train_features=None,
-            valid_features=None, distance=False):
-        x_train_a, x_train_b = self.pad(x_train_a, x_train_b)
-        x_valid_a, x_valid_b = self.pad(x_valid_a, x_valid_b)
+            pos_layer = Embedding(input_dim=2 * self.config.pos_limit + 3, output_dim=self.config.position_dim,
+                                  name='position_embedding', trainable=True)
+            sent_pos1 = pos_layer(pos1)
+            sent_pos2 = pos_layer(pos2)
+            sent_embedding = concatenate([sent_embedding, sent_pos1, sent_pos2])
+
+        filter_length = 3
+        conv_layer = Conv1D(filters=300, kernel_size=filter_length, padding='valid', strides=1)
+        sent_c = conv_layer(sent_embedding)
+        sent_maxpooling = MaxPooling1D(pool_size=self.config.max_len - filter_length + 1)(sent_c)
+        sent_conv = Flatten()(sent_maxpooling)
+        sent_conv = Activation('tanh')(sent_conv)
+        sent = Dropout(0.5)(sent_conv)
+        # sent = BatchNormalization(name='sent_representation')(sent_conv)
+
+        sent = concatenate([sent, features], axis=-1)
+        # x = Dense(400, activation='relu')(sent)
+        # x = BatchNormalization()(x)
+        # x = Dense(400, activation='relu')(x)
+        # x = BatchNormalization()(x)
+        # output = Dense(35, activation='softmax', name='output')(x)
+        output = Dense(35, activation='softmax', name='output')(sent)
+
+        # model = Model(inputs=[sentence1, sentence2], outputs=simi)
+        inputs = [sentence]
+        if self.config.level == 'word_char':
+            inputs.append(sentence_char)
+        # if pos:
+        #     inputs.append(pos1)
+        #     inputs.append(pos2)
+        if self.config.features_len > 0:
+            inputs.append(features)
+        self.model = Model(inputs=inputs, outputs=output)
+        self.model.compile(loss='categorical_crossentropy', optimizer=self.config.optimizer,
+                               metrics=['accuracy'])
+
+    def cnn_base(self):
+        sentence = Input(shape=(self.config.max_len,), dtype='int32', name='sent_base')
+        weights = np.load(os.path.join(self.config.embedding_path, self.config.embedding_file))
+        embedding_layer = Embedding(input_dim=weights.shape[0],
+                                    output_dim=weights.shape[-1],
+                                    weights=[weights], name='embedding_layer', trainable=True)
+        sent_embedding = embedding_layer(sentence)
+
+        filter_length = 3
+        conv_layer = Conv1D(filters=100, kernel_size=filter_length, padding='valid', strides=1)
+        sent_c = conv_layer(sent_embedding)
+        sent_maxpooling = MaxPooling1D(pool_size=self.config.max_len - filter_length + 1)(sent_c)
+        sent_conv = Flatten()(sent_maxpooling)
+        sent_conv = Activation('tanh')(sent_conv)
+        sent = Dropout(0.5)(sent_conv)
+        output = Dense(35, activation='softmax', name='output')(sent)
+
+        inputs = [sentence]
+        self.model = Model(inputs=inputs, outputs=output)
+        self.model.compile(loss='categorical_crossentropy', optimizer=self.config.optimizer,
+                           metrics=['accuracy'])
+
+    def pad(self, x_data):
+        return pad_sequences(x_data, maxlen=self.config.max_len, padding='post', truncating='post')
+
+    def fit(self, x_train, y_train, x_valid, y_valid, train_features=None,
+            valid_features=None):
+        x_train = self.pad(x_train)
+        x_valid = self.pad(x_valid)
+        # 结果集one-hot
+        y_train = to_categorical(y_train)
+        y_valid = to_categorical(y_valid)
+
         y_train = np.asarray(y_train)
         y_valid = np.asarray(y_valid)
+
         self.callbacks = []
         if train_features is not None:
             train_features = np.asarray(train_features)
             valid_features = np.asarray(valid_features)
-            self.init_callbacks(feature=True)
-            self.model.fit([x_train_a, x_train_b, train_features], y_train,
+            self.init_callbacks()
+            self.model.fit([x_train, train_features], y_train,
                            epochs=self.config.num_epochs,
                            verbose=self.config.verbose_training,
                            batch_size=self.config.batch_size,
-                           validation_data=([x_valid_a, x_valid_b, valid_features], y_valid),
+                           validation_data=([x_valid, valid_features], y_valid),
                            callbacks=self.callbacks)
         else:
-            if distance:
-                self.config.checkpoint_monitor = "val_acc"
-                self.config.early_stopping_monitor = 'val_acc'
-            self.init_callbacks(distance=distance)
-            self.model.fit([x_train_a, x_train_b], y_train,
+            self.model.fit(x_train, y_train,
                            epochs=self.config.num_epochs,
                            verbose=self.config.verbose_training,
                            batch_size=self.config.batch_size,
-                           validation_data=([x_valid_a, x_valid_b], y_valid),
+                           validation_data=(x_valid, y_valid),
                            callbacks=self.callbacks)
 
-    def predict(self, x_a, x_b, x_features=None):
-        x_a, x_b = self.pad(x_a, x_b)
+    def predict(self, x, x_features=None):
+        x = self.pad(x)
         if x_features is not None:
-            y_pred = self.model.predict([x_a, x_b, x_features], batch_size=100, verbose=1)
+            y_pred = self.model.predict([x, x_features], batch_size=100, verbose=1)
         else:
-            y_pred = self.model.predict([x_a, x_b], batch_size=100, verbose=1)
+            y_pred = self.model.predict(x, batch_size=100, verbose=1)
         return y_pred
 
-    def evaluate(self, y_pred, y_true, distance=False):
-        if y_pred.shape[-1] > 1:
-            y_pred = [np.argmax(y) for y in y_pred]
-        else:
-            if distance:
-                y_pred = [y[0] < 0.5 for y in y_pred]
-            else:
-                y_pred = [y[0] > 0.5 for y in y_pred]
+    def evaluate(self, y_pred, y_true):
+        y_pred = [np.argmax(y) for y in y_pred]
         precision = precision_score(y_true, y_pred, average='micro')
         recall = recall_score(y_true, y_pred, average='micro')
         f1 = f1_score(y_true, y_pred, average='micro')

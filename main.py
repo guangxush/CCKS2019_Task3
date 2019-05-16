@@ -6,11 +6,12 @@ from config import Config
 
 
 def get_data(train_file=None, valid_file=None, test_file=None, level='word'):
-    if level == 'char' or level == 'word':
-        x_train_a, x_train_b, y_train, vocabulary = load_data(train_file, level)
-        x_valid_a, x_valid_b, y_valid, vocabulary = load_data(valid_file, level)
-        x_test_a, x_test_b, y_test, vocabulary = load_data(test_file, level)
-        return x_train_a, x_train_b, y_train, x_valid_a, x_valid_b, y_valid, x_test_a, x_test_b, y_test, vocabulary
+    if level == 'char' or level == 'word' or level == 'test':
+        x_train, y_train, vocabulary = load_data(train_file, 'word')
+        x_valid, y_valid, vocabulary = load_data(valid_file, 'word')
+    # if level == 'test':
+        x_test, vocabulary = load_data(test_file, 'test')
+    return x_train, y_train, x_valid, y_valid, x_test, vocabulary
 
 
 def siamese_cnn(x_train_a, x_train_b, y_train, x_valid_a, x_valid_b, y_valid, x_test_a, x_test_b, y_test, level,
@@ -85,16 +86,45 @@ def siamese_att_cnn(x_train_a, x_train_b, y_train, x_valid_a, x_valid_b, y_valid
     siamese_model.evaluate(y_test_pred, y_test, distance=distance)
 
 
+def cnn_base(x_train, y_train, x_valid, y_valid, x_test, level, fasttext=False, overwrite=False):
+    config = Config()
+    config.level = level
+    if level == 'word':
+        config.max_len = config.max_len_word
+        config.vocab_len = config.vocab_len_word
+    else:
+        config.max_len = config.max_len_char
+        config.vocab_len = config.vocab_len_char
+    config.exp_name = 'cnn_base_' +level
+
+    if not os.path.exists(config.checkpoint_dir):
+        os.makedirs(config.checkpoint_dir)
+    if fasttext:
+        config.embedding_file += 'fasttext'
+        config.exp_name += '_fasttext'
+    else:
+        config.embedding_file += 'embeddings'
+    cnn_model = Models.Models(config)
+    print('Create the siamese_cnn model...')
+    cnn_model.cnn_base()
+    if overwrite or not os.path.exists(os.path.join(config.checkpoint_dir, '%s.hdf5' % config.exp_name)):
+        print('Start training the siamese_cnn model...')
+        cnn_model.fit(x_train, y_train, x_valid, y_valid)
+    cnn_model.load_weight()
+    print('Start evaluate the siamese_cnn model...')
+    y_valid_pred = cnn_model.predict(x_valid)
+    y_test_pred = cnn_model.predict(x_test)
+    cnn_model.evaluate(y_valid_pred, y_valid)
+    return y_test_pred
+
+
 if __name__ == '__main__':
     level = 'word'
     fasttext = False
     overwrite = False
     print('Load %s_level data...' % level)
-    x_train_a, x_train_b, y_train, x_valid_a, x_valid_b, y_valid, x_test_a, x_test_b, y_test, vocab = \
-        get_data(train_file='data/xxx_train.tsv', valid_file='data/xxx_dev.tsv',
-                 test_file='data/xxx_test.tsv', level=level)
+    x_train, y_train, x_valid, y_valid, x_test, vocab = \
+        get_data(train_file='./data/sent_train.txt', valid_file='./data/sent_dev.txt',
+                 test_file='./data/sent_test.txt', level=level)
 
-    siamese_cnn(x_train_a, x_train_b, y_train, x_valid_a, x_valid_b, y_valid, x_test_a, x_test_b, y_test, level,
-                    fasttext=fasttext, overwrite=overwrite)
-    siamese_att_cnn(x_train_a, x_train_b, y_train, x_valid_a, x_valid_b, y_valid, x_test_a, x_test_b, y_test, level,
-                    fasttext=fasttext, overwrite=overwrite)
+    cnn_base(x_train, y_train, x_valid, y_valid, x_test, level, fasttext=fasttext, overwrite=overwrite)

@@ -72,11 +72,7 @@ def train_valid_split(raw_file):
     with codecs.open(raw_file, encoding='utf-8') as f_raw:
         lines = f_raw.readlines()
         for line in lines:
-            # _, _, label = line.strip().split('\t')
-            # labels.append(label)
             line = json.loads(line)
-            # input_a = line['sentence1']
-            # input_b = line['sentence2']
             labels = line['gold_label']
 
     train_lines, valid_lines = train_test_split(lines, test_size=0.1, random_state=7, stratify=labels)
@@ -256,26 +252,25 @@ def load_data(raw_file, level):
         with open('data/word_level/vocabulary_all.pkl', 'rb') as f_vocabulary:
             vocabulary = pickle.load(f_vocabulary)
         print('vocab_len_word:', len(vocabulary))
-        x_a = list()
-        x_b = list()
+        x = list()
         y = list()
         max_len = 0
         with codecs.open(raw_file, encoding='utf-8') as f_train:
             lines = f_train.readlines()
+            print(lines[0])
             for line in tqdm(lines):
-                input_a, input_b, label = line.strip().split('\t')
-                if label == '-':
-                    continue
-                label = gold_label[label]
-                words_a = nltk.word_tokenize(input_a.lower())
-                words_b = nltk.word_tokenize(input_b.lower())
-                x_a.append([vocabulary.get(word, len(vocabulary) + 1) for word in words_a if word not in stopwords])
-                x_b.append([vocabulary.get(word, len(vocabulary) + 1) for word in words_b if word not in stopwords])
+                json_data = json.loads(line)
+                input = json_data['sent']
+                label = json_data['label']
+                # 31 4这种标签单独处理
+                if len(label.split(' ')) > 1:
+                    label = label.split(' ')[0]
+
+                words = nltk.word_tokenize(input)
+                x.append([vocabulary.get(word, len(vocabulary) + 1) for word in words if word not in stopwords])
                 y.append(float(label))
-                if len(x_a[-1]) > max_len:
-                    max_len = len(x_a[-1])
-                if len(x_b[-1]) > max_len:
-                    max_len = len(x_b[-1])
+                if len(x[-1]) > max_len:
+                    max_len = len(x[-1])
         print('max_word_len', max_len)
         avg_len = 0
         max_len = 0
@@ -285,35 +280,61 @@ def load_data(raw_file, level):
             avg_len += len(word)
         print('char_max_len:', max_len)
         print('char_avg_len:', float(avg_len)/len(vocabulary))
-        return x_a, x_b, y, vocabulary
+        return x, y, vocabulary
     elif level == 'char':
         with open('data/char_level/vocabulary_all.pkl', 'rb') as f_vocabulary:
             vocabulary = pickle.load(f_vocabulary)
         print('vocab_len_char:', len(vocabulary))
-        x_a = list()
-        x_b = list()
+        x = list()
         y = list()
         char_len = 0
         max_len = 0
         with codecs.open(raw_file, encoding='utf-8') as f_train:
             lines = f_train.readlines()
+            print(lines[0])
             for line in tqdm(lines):
-                input_a, input_b, label = line.strip().split('\t')
-                if label == '-':
-                    continue
-                label = gold_label[label]
-                x_a.append([vocabulary.get(char, len(vocabulary) + 1) for char in input_a if char not in stopwords])
-                x_b.append([vocabulary.get(char, len(vocabulary) + 1) for char in input_b if char not in stopwords])
-                y.append(float(label))
-                char_len += len(x_a[-1]) + len(x_b[-1])
-                if len(x_a[-1]) > max_len:
-                    max_len = len(x_a[-1])
-                if len(x_b[-1]) > max_len:
-                    max_len = len(x_b[-1])
+                json_data = json.loads(line)
+                input = json_data['sent']
+                label = json_data['label']
 
-        print('avg_char_len:', float(char_len) / (len(x_a)*2))
+                label = gold_label[label]
+                x.append([vocabulary.get(char, len(vocabulary) + 1) for char in input if char not in stopwords])
+                y.append(float(label))
+                char_len = len(x[-1])
+                if len(x[-1]) > max_len:
+                    max_len = len(x[-1])
+
+        print('avg_char_len:', float(char_len) / (len(x)*2))
         print('max_char_len:', max_len)
-        return x_a, x_b, y, vocabulary
+        return x, y, vocabulary
+
+    elif level == 'test':
+        with open('data/word_level/vocabulary_all.pkl', 'rb') as f_vocabulary:
+            vocabulary = pickle.load(f_vocabulary)
+        print('vocab_len_word:', len(vocabulary))
+        x = list()
+        max_len = 0
+        with codecs.open(raw_file, encoding='utf-8') as f_train:
+            lines = f_train.readlines()
+            print(lines[0])
+            for line in tqdm(lines):
+                json_data = json.loads(line)
+                input = json_data['sent']
+
+                words = nltk.word_tokenize(input)
+                x.append([vocabulary.get(word, len(vocabulary) + 1) for word in words if word not in stopwords])
+                if len(x[-1]) > max_len:
+                    max_len = len(x[-1])
+        print('max_word_len', max_len)
+        avg_len = 0
+        max_len = 0
+        for word, id in vocabulary.items():
+            if len(word) > max_len:
+                max_len = len(word)
+            avg_len += len(word)
+        print('char_max_len:', max_len)
+        print('char_avg_len:', float(avg_len) / len(vocabulary))
+        return x, vocabulary
 
 
 def load_sentence(x, y):
