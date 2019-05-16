@@ -11,12 +11,12 @@ class Config(object):
         self.embedding_path_char = None
         self.max_len = None
         self.vocab_len = None
-        self.num_epochs = 10  # 100
+        self.num_epochs = 30  # 100
         self.learning_rate = 0.001
         self.optimizer = "adam"
         self.batch_size = 128
         self.verbose_training = 1
-        self.checkpoint_monitor = "val_binary_accuracy"
+        self.checkpoint_monitor = "val_f1"
         self.checkpoint_mode = "max"
         self.checkpoint_save_best_only = True
         self.checkpoint_save_weights_only = True
