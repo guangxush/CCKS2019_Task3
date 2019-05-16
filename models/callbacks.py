@@ -30,7 +30,7 @@ class CategoricalMetrics(Callback):
         #     valid_y_true = [np.argmax(y) for y in valid_y_true]
         # _val_f1 = f1_score(valid_y_true, valid_y_pred)
         # 替换成比赛中需要的f1
-        _val_f1 = self.new_f1(valid_results, valid_y_true)
+        _val_f1 = self.new_f1(valid_results, valid_y)
         _val_recall = recall_score(valid_y_true, valid_y_pred)
         _val_precision = precision_score(valid_y_true, valid_y_pred)
         _val_auc = roc_auc_score(valid_y_true, valid_y_pred)
@@ -39,9 +39,9 @@ class CategoricalMetrics(Callback):
         logs['val_f1'] = _val_f1
         logs['val_auc'] = _val_auc
         self.val_f1s.append(_val_f1)
-        # self.val_recalls.append(_val_recall)
-        # self.val_precisions.append(_val_precision)
-        # self.val_aucs.append(_val_auc)
+        self.val_recalls.append(_val_recall)
+        self.val_precisions.append(_val_precision)
+        self.val_aucs.append(_val_auc)
         # print('- val_precision: %.4f - val_recall: %.4f  - val_f1: %.4f - val_auc: %.4f' %
         #       (_val_precision, _val_recall, _val_f1, _val_auc))
         print('- val_f1: %.4f' % _val_f1)
