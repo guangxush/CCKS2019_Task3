@@ -21,7 +21,7 @@ class Config(object):
         self.checkpoint_save_best_only = True
         self.checkpoint_save_weights_only = True
         self.checkpoint_verbose = True
-        self.early_stopping_monitor = 'val_binary_accuracy'
+        self.early_stopping_monitor = 'val_f1'
         self.early_stopping_patience = 5
         self.early_stopping_mode = 'max'
         self.max_len_word = 73
