@@ -336,7 +336,7 @@ def load_data(raw_file, level):
             avg_len += len(word)
         print('char_max_len:', max_len)
         print('char_avg_len:', float(avg_len) / len(vocabulary))
-        return id, x, vocabulary
+        return ids, x, vocabulary
 
 
 def load_sentence(x, y):
