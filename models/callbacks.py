@@ -35,7 +35,7 @@ class CategoricalMetrics(Callback):
         _val_f1 = self.new_f1(valid_results, valid_y)
         _val_recall = recall_score(valid_y_true, valid_y_pred, average='weighted')
         _val_precision = precision_score(valid_y_true, valid_y_pred, average='weighted')
-        _val_auc = roc_auc_score(valid_y_true, valid_y_pred, average='weighted')
+        _val_auc = roc_auc_score(valid_y_true, valid_y_pred, average='macro')
         logs['val_precisions'] = _val_precision
         logs['val_recall'] = _val_recall
         logs['val_f1'] = _val_f1
@@ -44,9 +44,9 @@ class CategoricalMetrics(Callback):
         self.val_recalls.append(_val_recall)
         self.val_precisions.append(_val_precision)
         self.val_aucs.append(_val_auc)
-        # print('- val_precision: %.4f - val_recall: %.4f  - val_f1: %.4f - val_auc: %.4f' %
-        #       (_val_precision, _val_recall, _val_f1, _val_auc))
-        print('- val_f1: %.4f' % _val_f1)
+        print('- val_precision: %.4f - val_recall: %.4f  - val_f1: %.4f - val_auc: %.4f' %
+              (_val_precision, _val_recall, _val_f1, _val_auc))
+        # print('- val_f1: %.4f' % _val_f1)
         return
 
     def new_f1(self, all_preds, all_labels):
