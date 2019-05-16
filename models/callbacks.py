@@ -33,9 +33,9 @@ class CategoricalMetrics(Callback):
         # _val_f1 = f1_score(valid_y_true, valid_y_pred)
         # 替换成比赛中需要的f1
         _val_f1 = self.new_f1(valid_results, valid_y)
-        _val_recall = recall_score(valid_y_true, valid_y_pred)
-        _val_precision = precision_score(valid_y_true, valid_y_pred)
-        _val_auc = roc_auc_score(valid_y_true, valid_y_pred)
+        _val_recall = recall_score(valid_y_true, valid_y_pred, average='weighted')
+        _val_precision = precision_score(valid_y_true, valid_y_pred, average='weighted')
+        _val_auc = roc_auc_score(valid_y_true, valid_y_pred, average='weighted')
         logs['val_precisions'] = _val_precision
         logs['val_recall'] = _val_recall
         logs['val_f1'] = _val_f1
