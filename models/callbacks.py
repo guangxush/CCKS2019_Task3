@@ -24,20 +24,20 @@ class CategoricalMetrics(Callback):
         #     valid_y_pred = [np.argmax(valid_result) for valid_result in valid_results]
         # else:
         #     valid_y_pred = [valid_result[0] > 0.5 for valid_result in valid_results]
-        valid_y_true = self.validation_data[1]
-        valid_y_true = np.argmax(valid_y_true, axis=1)
+        valid_y = self.validation_data[1]
+        valid_y_true = np.argmax(valid_y, axis=1)
         # if valid_y_true.shape[-1] > 1:
         #     valid_y_true = [np.argmax(y) for y in valid_y_true]
         # _val_f1 = f1_score(valid_y_true, valid_y_pred)
         # 替换成比赛中需要的f1
-        _val_f1 = self.new_f1(valid_y_true, valid_y_pred)
-        # _val_recall = recall_score(valid_y_true, valid_y_pred)
-        # _val_precision = precision_score(valid_y_true, valid_y_pred)
-        # _val_auc = roc_auc_score(valid_y_true, valid_y_pred)
-        # logs['val_precisions'] = _val_precision
-        # logs['val_recall'] = _val_recall
+        _val_f1 = self.new_f1(valid_results, valid_y_true)
+        _val_recall = recall_score(valid_y_true, valid_y_pred)
+        _val_precision = precision_score(valid_y_true, valid_y_pred)
+        _val_auc = roc_auc_score(valid_y_true, valid_y_pred)
+        logs['val_precisions'] = _val_precision
+        logs['val_recall'] = _val_recall
         logs['val_f1'] = _val_f1
-        # logs['val_auc'] = _val_auc
+        logs['val_auc'] = _val_auc
         self.val_f1s.append(_val_f1)
         # self.val_recalls.append(_val_recall)
         # self.val_precisions.append(_val_precision)
