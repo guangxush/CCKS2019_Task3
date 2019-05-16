@@ -284,7 +284,7 @@ class Models(object):
         inputs = [sentence]
         self.model = Model(inputs=inputs, outputs=output)
         self.model.compile(loss='categorical_crossentropy', optimizer=self.config.optimizer,
-                           metrics=[self.f1])
+                           metrics=['acc'])
 
     def pad(self, x_data):
         return pad_sequences(x_data, maxlen=self.config.max_len, padding='post', truncating='post')
@@ -343,16 +343,5 @@ class Models(object):
         # print 'Auc:', auc
         return precision, recall, f1, accuracy  # , auc
 
-    def f1(self, all_preds, all_labels):
-        n_r = int(np.sum(all_preds[:, 1:] * all_labels[:, 1:]))
-        n_std = int(np.sum(all_labels[:, 1:]))
-        n_sys = int(np.sum(all_preds[:, 1:]))
-        try:
-            precision = n_r / n_sys
-            recall = n_r / n_std
-            f1 = 2 * precision * recall / (precision + recall)
-        except ZeroDivisionError:
-            f1 = 0.0
-        return f1
 
 
