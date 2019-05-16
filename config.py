@@ -11,7 +11,7 @@ class Config(object):
         self.embedding_path_char = None
         self.max_len = None
         self.vocab_len = None
-        self.num_epochs = 100
+        self.num_epochs = 10  # 100
         self.learning_rate = 0.001
         self.optimizer = "adam"
         self.batch_size = 128
@@ -31,6 +31,7 @@ class Config(object):
         self.char_per_word = 10
         self.embedding_path = "modfile"
         self.embedding_file = 'sst_100_dim_all.'
+        self.result_file = './result/result_sent.txt'
         self.embedding_dim = 300
         self.dropout = 0.1
         self.features_len = 0

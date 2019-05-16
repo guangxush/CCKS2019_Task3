@@ -76,193 +76,193 @@ class Models(object):
         self.model.load_weights(checkpoint_path, by_name=by_name)
         print("Model loaded")
 
-    def siamese_cnn(self, distance=False, manhattan=False):
-        weights = np.load(
-            os.path.join(self.config.embedding_path, self.config.level + '_level', self.config.embedding_file))
-        sentence1 = Input(shape=(self.config.max_len,), dtype='int32', name='sent1_base')
-        sentence2 = Input(shape=(self.config.max_len,), dtype='int32', name='sent2_base')
-        features = Input(shape=(self.config.features_len,), dtype='float32', name='features')
-        embedding_layer = Embedding(input_dim=self.config.vocab_len + 2,
-                                    output_dim=self.config.embedding_dim,
-                                    weights=[weights], name='embedding_layer', trainable=True)
-        sent1_embedding = embedding_layer(sentence1)
-        sent2_embedding = embedding_layer(sentence2)
-
-        filter_lengths = [2, 3, 4, 5]
-        sent1_conv_layers = []
-        sent2_conv_layers = []
-        for filter_length in filter_lengths:
-            conv_layer = Conv1D(filters=200, kernel_size=filter_length, padding='valid',
-                                activation='relu', strides=1)
-            sent1_c = conv_layer(sent1_embedding)
-            sent2_c = conv_layer(sent2_embedding)
-            sent1_maxpooling = MaxPooling1D(pool_size=self.config.max_len - filter_length + 1)(sent1_c)
-            sent1_flatten = Flatten()(sent1_maxpooling)
-            sent1_conv_layers.append(sent1_flatten)
-            sent2_maxpooling = MaxPooling1D(pool_size=self.config.max_len - filter_length + 1)(sent2_c)
-            sent2_flatten = Flatten()(sent2_maxpooling)
-            sent2_conv_layers.append(sent2_flatten)
-        sent1_conv = concatenate(inputs=sent1_conv_layers)
-        sent2_conv = concatenate(inputs=sent2_conv_layers)
-
-        if distance:
-            distance = Lambda(euclidean_distance, output_shape=eucl_dist_output_shape)([sent1_conv, sent2_conv])
-            self.model = Model([sentence1, sentence2], distance)
-            self.model.compile(loss=contrastive_loss, optimizer=self.config.optimizer, metrics=[acc])
-        elif manhattan:
-            distance = Lambda(manhattan_distance, output_shape=eucl_dist_output_shape)([sent1_conv, sent2_conv])
-            self.model = Model([sentence1, sentence2], distance)
-            self.model.compile(loss='binary_crossentropy',
-                               optimizer=self.config.optimizer,
-                               metrics=['acc'])
-        else:
-            sent = concatenate([sent1_conv, sent2_conv])
-            sent = BatchNormalization(name='sent_representation')(sent)
-            if self.config.features_len > 0:
-                sent = concatenate([sent, features], axis=-1)
-            x = Dense(400, activation='relu', name='dense1')(sent)
-            x = BatchNormalization(name='batch_normal2')(x)
-            x = Dense(400, activation='relu', name='dense2')(x)
-            x = BatchNormalization(name='batch_normal3')(x)
-            # simi = Dense(3, activation='softmax')(x)
-            simi = Dense(1, activation='sigmoid', name='simi')(x)
-
-            if self.config.features_len == 0:
-                self.model = Model(inputs=[sentence1, sentence2], outputs=simi)
-            else:
-                self.model = Model(inputs=[sentence1, sentence2, features], outputs=simi)
-            self.model.compile(loss='binary_crossentropy', optimizer=self.config.optimizer,
-                               metrics=['binary_accuracy'])
-
-    def siamese_att_cnn(self, distance=False, manhattan=False):
-        weights = np.load(
-            os.path.join(self.config.embedding_path, self.config.level + '_level', self.config.embedding_file))
-        sentence1 = Input(shape=(self.config.max_len,), dtype='int32', name='sent1_base')
-        sentence2 = Input(shape=(self.config.max_len,), dtype='int32', name='sent2_base')
-        features = Input(shape=(self.config.features_len,), dtype='float32', name='features')
-        embedding_layer = Embedding(input_dim=self.config.vocab_len + 2,
-                                    output_dim=self.config.embedding_dim,
-                                    weights=[weights], name='embedding_layer', trainable=True)
-        sent1_embedding = embedding_layer(sentence1)
-        sent2_embedding = embedding_layer(sentence2)
-
-        attention = Dot(axes=-1)([sent1_embedding, sent2_embedding])
-        wb = Lambda(lambda x: softmax(x, axis=1), output_shape=lambda x: x)(attention)
-        wa = Permute((2, 1))(Lambda(lambda x: softmax(x, axis=2), output_shape=lambda x: x)(attention))
-        sent1_ = Dot(axes=1)([wa, sent2_embedding])
-        sent2_ = Dot(axes=1)([wb, sent1_embedding])
-        neg = Lambda(lambda x: -x, output_shape=lambda x: x)
-        substract1 = Add()([sent1_embedding, neg(sent1_)])
-        mutiply1 = Multiply()([sent1_embedding, sent1_])
-        substract2 = Add()([sent2_embedding, neg(sent2_)])
-        mutiply2 = Multiply()([sent2_embedding, sent2_])
-
-        sent1_att = concatenate([sent1_, substract1, mutiply1])
-        sent2_att = concatenate([sent2_, substract2, mutiply2])
-
-        filter_lengths = [2, 3, 4, 5]
-        sent1_conv_layers = []
-        sent2_conv_layers = []
-        for filter_length in filter_lengths:
-            conv_layer = AttConv1D(filters=200, kernel_size=filter_length, padding='same',
-                                   activation='relu', strides=1)
-            sent1_conv = conv_layer([sent1_embedding, sent1_att])
-            sent2_conv = conv_layer([sent2_embedding, sent2_att])
-            sent1_conv = MaxPooling1D(pool_size=self.config.max_len)(sent1_conv)
-            flatten = Flatten()(sent1_conv)
-            sent1_conv_layers.append(flatten)
-            sent2_conv = MaxPooling1D(pool_size=self.config.max_len)(sent2_conv)
-            flatten = Flatten()(sent2_conv)
-            sent2_conv_layers.append(flatten)
-        sent1_conv = concatenate(inputs=sent1_conv_layers)
-        sent2_conv = concatenate(inputs=sent2_conv_layers)
-
-        if distance:
-            distance = Lambda(euclidean_distance, output_shape=eucl_dist_output_shape)([sent1_conv, sent2_conv])
-            self.model = Model([sentence1, sentence2], distance)
-            self.model.compile(loss=contrastive_loss, optimizer=self.config.optimizer, metrics=[acc])
-        elif manhattan:
-            distance = Lambda(manhattan_distance, output_shape=eucl_dist_output_shape)([sent1_conv, sent2_conv])
-            self.model = Model([sentence1, sentence2], distance)
-            self.model.compile(loss='binary_crossentropy',
-                               optimizer=self.config.optimizer,
-                               metrics=['acc'])
-        else:
-            sent = concatenate([sent1_conv, sent2_conv])
-            sent = BatchNormalization(name='sent_representation')(sent)
-            if self.config.features_len > 0:
-                sent = concatenate([sent, features], axis=-1)
-            x = Dense(400, activation='relu', name='dense1')(sent)
-            x = BatchNormalization(name='batch_normal2')(x)
-            x = Dense(400, activation='relu', name='dense2')(x)
-            x = BatchNormalization(name='batch_normal3')(x)
-            # simi = Dense(3, activation='softmax')(x)
-            simi = Dense(1, activation='sigmoid', name='simi')(x)
-
-            if self.config.features_len == 0:
-                self.model = Model(inputs=[sentence1, sentence2], outputs=simi)
-            else:
-                self.model = Model(inputs=[sentence1, sentence2, features], outputs=simi)
-            self.model.compile(loss='binary_crossentropy', optimizer=self.config.optimizer,
-                               metrics=['binary_accuracy'])
-
-    def cnn(self, pos=False, pi=False):
-        sentence = Input(shape=(self.config.max_len,), dtype='int32', name='sent_base')
-        features = Input(shape=(self.config.features_len,), dtype='float32', name='features')
-        weights = np.load(os.path.join(self.config.embedding_path, 'word_level', self.config.embedding_file))
-        if pi:
-            p = np.zeros(shape=(4, weights.shape[-1]), dtype='float32')
-            weights = np.vstack((weights, p))
-        embedding_layer = Embedding(input_dim=weights.shape[0],
-                                    output_dim=weights.shape[-1],
-                                    weights=[weights], name='embedding_layer', trainable=True)
-        sent_embedding = embedding_layer(sentence)
-        if self.config.level == 'word_char':
-            sentence_char = Input(shape=(self.config.max_len, self.config.char_per_word), dtype='int32',
-                                  name='sent_char_base')
-            weights_char = np.load(os.path.join(self.config.embedding_path, 'char_level', self.config.embedding_file))
-            char_emb = self.char_embedding(weights_char)
-            sent_char_embedding = char_emb(sentence_char)
-            sent_embedding = concatenate([sent_embedding, sent_char_embedding])
-        if pos:
-            pos1 = Input(shape=(self.config.max_len,), dtype='int32', name='pos1')
-            pos2 = Input(shape=(self.config.max_len,), dtype='int32', name='pos2')
-
-            pos_layer = Embedding(input_dim=2 * self.config.pos_limit + 3, output_dim=self.config.position_dim,
-                                  name='position_embedding', trainable=True)
-            sent_pos1 = pos_layer(pos1)
-            sent_pos2 = pos_layer(pos2)
-            sent_embedding = concatenate([sent_embedding, sent_pos1, sent_pos2])
-
-        filter_length = 3
-        conv_layer = Conv1D(filters=300, kernel_size=filter_length, padding='valid', strides=1)
-        sent_c = conv_layer(sent_embedding)
-        sent_maxpooling = MaxPooling1D(pool_size=self.config.max_len - filter_length + 1)(sent_c)
-        sent_conv = Flatten()(sent_maxpooling)
-        sent_conv = Activation('tanh')(sent_conv)
-        sent = Dropout(0.5)(sent_conv)
-        # sent = BatchNormalization(name='sent_representation')(sent_conv)
-
-        sent = concatenate([sent, features], axis=-1)
-        # x = Dense(400, activation='relu')(sent)
-        # x = BatchNormalization()(x)
-        # x = Dense(400, activation='relu')(x)
-        # x = BatchNormalization()(x)
-        # output = Dense(35, activation='softmax', name='output')(x)
-        output = Dense(35, activation='softmax', name='output')(sent)
-
-        # model = Model(inputs=[sentence1, sentence2], outputs=simi)
-        inputs = [sentence]
-        if self.config.level == 'word_char':
-            inputs.append(sentence_char)
-        # if pos:
-        #     inputs.append(pos1)
-        #     inputs.append(pos2)
-        if self.config.features_len > 0:
-            inputs.append(features)
-        self.model = Model(inputs=inputs, outputs=output)
-        self.model.compile(loss='categorical_crossentropy', optimizer=self.config.optimizer,
-                               metrics=['accuracy'])
+    # def siamese_cnn(self, distance=False, manhattan=False):
+    #     weights = np.load(
+    #         os.path.join(self.config.embedding_path, self.config.level + '_level', self.config.embedding_file))
+    #     sentence1 = Input(shape=(self.config.max_len,), dtype='int32', name='sent1_base')
+    #     sentence2 = Input(shape=(self.config.max_len,), dtype='int32', name='sent2_base')
+    #     features = Input(shape=(self.config.features_len,), dtype='float32', name='features')
+    #     embedding_layer = Embedding(input_dim=self.config.vocab_len + 2,
+    #                                 output_dim=self.config.embedding_dim,
+    #                                 weights=[weights], name='embedding_layer', trainable=True)
+    #     sent1_embedding = embedding_layer(sentence1)
+    #     sent2_embedding = embedding_layer(sentence2)
+    #
+    #     filter_lengths = [2, 3, 4, 5]
+    #     sent1_conv_layers = []
+    #     sent2_conv_layers = []
+    #     for filter_length in filter_lengths:
+    #         conv_layer = Conv1D(filters=200, kernel_size=filter_length, padding='valid',
+    #                             activation='relu', strides=1)
+    #         sent1_c = conv_layer(sent1_embedding)
+    #         sent2_c = conv_layer(sent2_embedding)
+    #         sent1_maxpooling = MaxPooling1D(pool_size=self.config.max_len - filter_length + 1)(sent1_c)
+    #         sent1_flatten = Flatten()(sent1_maxpooling)
+    #         sent1_conv_layers.append(sent1_flatten)
+    #         sent2_maxpooling = MaxPooling1D(pool_size=self.config.max_len - filter_length + 1)(sent2_c)
+    #         sent2_flatten = Flatten()(sent2_maxpooling)
+    #         sent2_conv_layers.append(sent2_flatten)
+    #     sent1_conv = concatenate(inputs=sent1_conv_layers)
+    #     sent2_conv = concatenate(inputs=sent2_conv_layers)
+    #
+    #     if distance:
+    #         distance = Lambda(euclidean_distance, output_shape=eucl_dist_output_shape)([sent1_conv, sent2_conv])
+    #         self.model = Model([sentence1, sentence2], distance)
+    #         self.model.compile(loss=contrastive_loss, optimizer=self.config.optimizer, metrics=[acc])
+    #     elif manhattan:
+    #         distance = Lambda(manhattan_distance, output_shape=eucl_dist_output_shape)([sent1_conv, sent2_conv])
+    #         self.model = Model([sentence1, sentence2], distance)
+    #         self.model.compile(loss='binary_crossentropy',
+    #                            optimizer=self.config.optimizer,
+    #                            metrics=['acc'])
+    #     else:
+    #         sent = concatenate([sent1_conv, sent2_conv])
+    #         sent = BatchNormalization(name='sent_representation')(sent)
+    #         if self.config.features_len > 0:
+    #             sent = concatenate([sent, features], axis=-1)
+    #         x = Dense(400, activation='relu', name='dense1')(sent)
+    #         x = BatchNormalization(name='batch_normal2')(x)
+    #         x = Dense(400, activation='relu', name='dense2')(x)
+    #         x = BatchNormalization(name='batch_normal3')(x)
+    #         # simi = Dense(3, activation='softmax')(x)
+    #         simi = Dense(1, activation='sigmoid', name='simi')(x)
+    #
+    #         if self.config.features_len == 0:
+    #             self.model = Model(inputs=[sentence1, sentence2], outputs=simi)
+    #         else:
+    #             self.model = Model(inputs=[sentence1, sentence2, features], outputs=simi)
+    #         self.model.compile(loss='binary_crossentropy', optimizer=self.config.optimizer,
+    #                            metrics=['binary_accuracy'])
+    #
+    # def siamese_att_cnn(self, distance=False, manhattan=False):
+    #     weights = np.load(
+    #         os.path.join(self.config.embedding_path, self.config.level + '_level', self.config.embedding_file))
+    #     sentence1 = Input(shape=(self.config.max_len,), dtype='int32', name='sent1_base')
+    #     sentence2 = Input(shape=(self.config.max_len,), dtype='int32', name='sent2_base')
+    #     features = Input(shape=(self.config.features_len,), dtype='float32', name='features')
+    #     embedding_layer = Embedding(input_dim=self.config.vocab_len + 2,
+    #                                 output_dim=self.config.embedding_dim,
+    #                                 weights=[weights], name='embedding_layer', trainable=True)
+    #     sent1_embedding = embedding_layer(sentence1)
+    #     sent2_embedding = embedding_layer(sentence2)
+    #
+    #     attention = Dot(axes=-1)([sent1_embedding, sent2_embedding])
+    #     wb = Lambda(lambda x: softmax(x, axis=1), output_shape=lambda x: x)(attention)
+    #     wa = Permute((2, 1))(Lambda(lambda x: softmax(x, axis=2), output_shape=lambda x: x)(attention))
+    #     sent1_ = Dot(axes=1)([wa, sent2_embedding])
+    #     sent2_ = Dot(axes=1)([wb, sent1_embedding])
+    #     neg = Lambda(lambda x: -x, output_shape=lambda x: x)
+    #     substract1 = Add()([sent1_embedding, neg(sent1_)])
+    #     mutiply1 = Multiply()([sent1_embedding, sent1_])
+    #     substract2 = Add()([sent2_embedding, neg(sent2_)])
+    #     mutiply2 = Multiply()([sent2_embedding, sent2_])
+    #
+    #     sent1_att = concatenate([sent1_, substract1, mutiply1])
+    #     sent2_att = concatenate([sent2_, substract2, mutiply2])
+    #
+    #     filter_lengths = [2, 3, 4, 5]
+    #     sent1_conv_layers = []
+    #     sent2_conv_layers = []
+    #     for filter_length in filter_lengths:
+    #         conv_layer = AttConv1D(filters=200, kernel_size=filter_length, padding='same',
+    #                                activation='relu', strides=1)
+    #         sent1_conv = conv_layer([sent1_embedding, sent1_att])
+    #         sent2_conv = conv_layer([sent2_embedding, sent2_att])
+    #         sent1_conv = MaxPooling1D(pool_size=self.config.max_len)(sent1_conv)
+    #         flatten = Flatten()(sent1_conv)
+    #         sent1_conv_layers.append(flatten)
+    #         sent2_conv = MaxPooling1D(pool_size=self.config.max_len)(sent2_conv)
+    #         flatten = Flatten()(sent2_conv)
+    #         sent2_conv_layers.append(flatten)
+    #     sent1_conv = concatenate(inputs=sent1_conv_layers)
+    #     sent2_conv = concatenate(inputs=sent2_conv_layers)
+    #
+    #     if distance:
+    #         distance = Lambda(euclidean_distance, output_shape=eucl_dist_output_shape)([sent1_conv, sent2_conv])
+    #         self.model = Model([sentence1, sentence2], distance)
+    #         self.model.compile(loss=contrastive_loss, optimizer=self.config.optimizer, metrics=[acc])
+    #     elif manhattan:
+    #         distance = Lambda(manhattan_distance, output_shape=eucl_dist_output_shape)([sent1_conv, sent2_conv])
+    #         self.model = Model([sentence1, sentence2], distance)
+    #         self.model.compile(loss='binary_crossentropy',
+    #                            optimizer=self.config.optimizer,
+    #                            metrics=['acc'])
+    #     else:
+    #         sent = concatenate([sent1_conv, sent2_conv])
+    #         sent = BatchNormalization(name='sent_representation')(sent)
+    #         if self.config.features_len > 0:
+    #             sent = concatenate([sent, features], axis=-1)
+    #         x = Dense(400, activation='relu', name='dense1')(sent)
+    #         x = BatchNormalization(name='batch_normal2')(x)
+    #         x = Dense(400, activation='relu', name='dense2')(x)
+    #         x = BatchNormalization(name='batch_normal3')(x)
+    #         # simi = Dense(3, activation='softmax')(x)
+    #         simi = Dense(1, activation='sigmoid', name='simi')(x)
+    #
+    #         if self.config.features_len == 0:
+    #             self.model = Model(inputs=[sentence1, sentence2], outputs=simi)
+    #         else:
+    #             self.model = Model(inputs=[sentence1, sentence2, features], outputs=simi)
+    #         self.model.compile(loss='binary_crossentropy', optimizer=self.config.optimizer,
+    #                            metrics=['binary_accuracy'])
+    #
+    # def cnn(self, pos=False, pi=False):
+    #     sentence = Input(shape=(self.config.max_len,), dtype='int32', name='sent_base')
+    #     features = Input(shape=(self.config.features_len,), dtype='float32', name='features')
+    #     weights = np.load(os.path.join(self.config.embedding_path, 'word_level', self.config.embedding_file))
+    #     if pi:
+    #         p = np.zeros(shape=(4, weights.shape[-1]), dtype='float32')
+    #         weights = np.vstack((weights, p))
+    #     embedding_layer = Embedding(input_dim=weights.shape[0],
+    #                                 output_dim=weights.shape[-1],
+    #                                 weights=[weights], name='embedding_layer', trainable=True)
+    #     sent_embedding = embedding_layer(sentence)
+    #     if self.config.level == 'word_char':
+    #         sentence_char = Input(shape=(self.config.max_len, self.config.char_per_word), dtype='int32',
+    #                               name='sent_char_base')
+    #         weights_char = np.load(os.path.join(self.config.embedding_path, 'char_level', self.config.embedding_file))
+    #         char_emb = self.char_embedding(weights_char)
+    #         sent_char_embedding = char_emb(sentence_char)
+    #         sent_embedding = concatenate([sent_embedding, sent_char_embedding])
+    #     if pos:
+    #         pos1 = Input(shape=(self.config.max_len,), dtype='int32', name='pos1')
+    #         pos2 = Input(shape=(self.config.max_len,), dtype='int32', name='pos2')
+    #
+    #         pos_layer = Embedding(input_dim=2 * self.config.pos_limit + 3, output_dim=self.config.position_dim,
+    #                               name='position_embedding', trainable=True)
+    #         sent_pos1 = pos_layer(pos1)
+    #         sent_pos2 = pos_layer(pos2)
+    #         sent_embedding = concatenate([sent_embedding, sent_pos1, sent_pos2])
+    #
+    #     filter_length = 3
+    #     conv_layer = Conv1D(filters=300, kernel_size=filter_length, padding='valid', strides=1)
+    #     sent_c = conv_layer(sent_embedding)
+    #     sent_maxpooling = MaxPooling1D(pool_size=self.config.max_len - filter_length + 1)(sent_c)
+    #     sent_conv = Flatten()(sent_maxpooling)
+    #     sent_conv = Activation('tanh')(sent_conv)
+    #     sent = Dropout(0.5)(sent_conv)
+    #     # sent = BatchNormalization(name='sent_representation')(sent_conv)
+    #
+    #     sent = concatenate([sent, features], axis=-1)
+    #     # x = Dense(400, activation='relu')(sent)
+    #     # x = BatchNormalization()(x)
+    #     # x = Dense(400, activation='relu')(x)
+    #     # x = BatchNormalization()(x)
+    #     # output = Dense(35, activation='softmax', name='output')(x)
+    #     output = Dense(35, activation='softmax', name='output')(sent)
+    #
+    #     # model = Model(inputs=[sentence1, sentence2], outputs=simi)
+    #     inputs = [sentence]
+    #     if self.config.level == 'word_char':
+    #         inputs.append(sentence_char)
+    #     # if pos:
+    #     #     inputs.append(pos1)
+    #     #     inputs.append(pos2)
+    #     if self.config.features_len > 0:
+    #         inputs.append(features)
+    #     self.model = Model(inputs=inputs, outputs=output)
+    #     self.model.compile(loss='categorical_crossentropy', optimizer=self.config.optimizer,
+    #                            metrics=['accuracy'])
 
     def cnn_base(self):
         sentence = Input(shape=(self.config.max_len,), dtype='int32', name='sent_base')
@@ -284,7 +284,7 @@ class Models(object):
         inputs = [sentence]
         self.model = Model(inputs=inputs, outputs=output)
         self.model.compile(loss='categorical_crossentropy', optimizer=self.config.optimizer,
-                           metrics=['accuracy'])
+                           metrics=[self.f1])
 
     def pad(self, x_data):
         return pad_sequences(x_data, maxlen=self.config.max_len, padding='post', truncating='post')
@@ -312,6 +312,7 @@ class Models(object):
                            validation_data=([x_valid, valid_features], y_valid),
                            callbacks=self.callbacks)
         else:
+            self.init_callbacks()
             self.model.fit(x_train, y_train,
                            epochs=self.config.num_epochs,
                            verbose=self.config.verbose_training,
@@ -341,5 +342,17 @@ class Models(object):
         print('Accuracy:', accuracy)
         # print 'Auc:', auc
         return precision, recall, f1, accuracy  # , auc
+
+    def f1(self, all_preds, all_labels):
+        n_r = int(np.sum(all_preds[:, 1:] * all_labels[:, 1:]))
+        n_std = int(np.sum(all_labels[:, 1:]))
+        n_sys = int(np.sum(all_preds[:, 1:]))
+        try:
+            precision = n_r / n_sys
+            recall = n_r / n_std
+            f1 = 2 * precision * recall / (precision + recall)
+        except ZeroDivisionError:
+            f1 = 0.0
+        return f1
 
 

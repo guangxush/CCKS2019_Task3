@@ -313,6 +313,7 @@ def load_data(raw_file, level):
             vocabulary = pickle.load(f_vocabulary)
         print('vocab_len_word:', len(vocabulary))
         x = list()
+        ids = list()
         max_len = 0
         with codecs.open(raw_file, encoding='utf-8') as f_train:
             lines = f_train.readlines()
@@ -320,7 +321,8 @@ def load_data(raw_file, level):
             for line in tqdm(lines):
                 json_data = json.loads(line)
                 input = json_data['sent']
-
+                test_id = json_data['id'].strip('\"')
+                ids.append(test_id)
                 words = nltk.word_tokenize(input)
                 x.append([vocabulary.get(word, len(vocabulary) + 1) for word in words if word not in stopwords])
                 if len(x[-1]) > max_len:
@@ -334,7 +336,7 @@ def load_data(raw_file, level):
             avg_len += len(word)
         print('char_max_len:', max_len)
         print('char_avg_len:', float(avg_len) / len(vocabulary))
-        return x, vocabulary
+        return id, x, vocabulary
 
 
 def load_sentence(x, y):

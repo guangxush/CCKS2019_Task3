@@ -25,7 +25,9 @@ class CategoricalMetrics(Callback):
         valid_y_true = self.validation_data[2]
         if valid_y_true.shape[-1] > 1:
             valid_y_true = [np.argmax(y) for y in valid_y_true]
-        _val_f1 = f1_score(valid_y_true, valid_y_pred)
+        # _val_f1 = f1_score(valid_y_true, valid_y_pred)
+        # 替换成比赛中需要的f1
+        _val_f1 = self.new_f1(valid_y_true, valid_y_pred)
         _val_recall = recall_score(valid_y_true, valid_y_pred)
         _val_precision = precision_score(valid_y_true, valid_y_pred)
         _val_auc = roc_auc_score(valid_y_true, valid_y_pred)
@@ -40,6 +42,18 @@ class CategoricalMetrics(Callback):
         print('- val_precision: %.4f - val_recall: %.4f  - val_f1: %.4f - val_auc: %.4f' %
               (_val_precision, _val_recall, _val_f1, _val_auc))
         return
+
+    def new_f1(self, all_preds, all_labels):
+        n_r = int(np.sum(all_preds[:, 1:] * all_labels[:, 1:]))
+        n_std = int(np.sum(all_labels[:, 1:]))
+        n_sys = int(np.sum(all_preds[:, 1:]))
+        try:
+            precision = n_r / n_sys
+            recall = n_r / n_std
+            f1 = 2 * precision * recall / (precision + recall)
+        except ZeroDivisionError:
+            f1 = 0.0
+        return f1
 
 
 class CategoricalFeatureMetrics(Callback):
@@ -109,4 +123,6 @@ class DistanceMetrics(Callback):
 distance_metrics = DistanceMetrics()
 
 categorical_metrics = CategoricalMetrics()
+
+
 
