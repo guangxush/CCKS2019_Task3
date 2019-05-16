@@ -4,7 +4,7 @@
 class Config(object):
     def __init__(self):
         self.level = "word"
-        self.checkpoint_dir = 'models'
+        self.checkpoint_dir = 'modfile'
         self.exp_name = None
         self.embedding_path = None
         self.embedding_path_word = None
