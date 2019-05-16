@@ -2,6 +2,7 @@
 from keras.callbacks import Callback
 from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_score
 import numpy as np
+from sklearn.preprocessing import LabelBinarizer
 
 
 class CategoricalMetrics(Callback):
@@ -35,7 +36,7 @@ class CategoricalMetrics(Callback):
         _val_f1 = self.new_f1(valid_results, valid_y)
         _val_recall = recall_score(valid_y_true, valid_y_pred, average='weighted')
         _val_precision = precision_score(valid_y_true, valid_y_pred, average='weighted')
-        _val_auc = roc_auc_score(valid_y_true, valid_y_pred, average='macro')
+        _val_auc = self.multiclass_roc_auc_score(valid_y_true, valid_y_pred, average='weighted')
         logs['val_precisions'] = _val_precision
         logs['val_recall'] = _val_recall
         logs['val_f1'] = _val_f1
@@ -60,6 +61,14 @@ class CategoricalMetrics(Callback):
         except ZeroDivisionError:
             f1 = 0.0
         return f1
+
+    def multiclass_roc_auc_score(self, truth, pred, average="macro"):
+        lb = LabelBinarizer()
+        lb.fit(truth)
+
+        truth = lb.transform(truth)
+        pred = lb.transform(pred)
+        return roc_auc_score(truth, pred, average=average)
 
 
 class CategoricalFeatureMetrics(Callback):
