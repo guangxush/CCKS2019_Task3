@@ -13,7 +13,6 @@ from keras.callbacks import ModelCheckpoint, EarlyStopping
 
 from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_score, accuracy_score
 from keras.utils import to_categorical
-from models.cnn import AttConv1D
 
 import os
 import numpy as np
