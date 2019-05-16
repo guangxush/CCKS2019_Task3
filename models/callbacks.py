@@ -17,6 +17,7 @@ class CategoricalMetrics(Callback):
     def on_epoch_end(self, epoch, logs={}):
         valid_results = self.model.predict([self.validation_data[0]])
         valid_y_pred = np.argmax(valid_results, axis=1)
+        valid_y_pred.astype(int)
         # valid_y_pred = valid_results
         # if isinstance(valid_results, list):
         #     valid_results = valid_results[-1]
@@ -26,6 +27,7 @@ class CategoricalMetrics(Callback):
         #     valid_y_pred = [valid_result[0] > 0.5 for valid_result in valid_results]
         valid_y = self.validation_data[1]
         valid_y_true = np.argmax(valid_y, axis=1)
+        valid_y_true.astype(int)
         # if valid_y_true.shape[-1] > 1:
         #     valid_y_true = [np.argmax(y) for y in valid_y_true]
         # _val_f1 = f1_score(valid_y_true, valid_y_pred)
