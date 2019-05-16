@@ -1,6 +1,7 @@
 # -*- coding:utf-8 -*-
 import codecs
 import json
+import jieba
 
 
 def generate_json_data(sent_file, label_file, out_file, flag):
@@ -38,3 +39,10 @@ if __name__ == '__main__':
     label_file = '../raw_data/open_data/sent_relation_dev.txt'
     out_file = '../data/sent_dev.txt'
     generate_json_data(sent_file, label_file, out_file, flag='dev')
+
+    # test file
+    sent_file = '../raw_data/open_data/sent_test.txt'
+    label_file = '../raw_data/open_data/sent_relation_test.txt'
+    out_file = '../data/sent_test.txt'
+    generate_json_data(sent_file, label_file, out_file, flag='test')
+

@@ -2,21 +2,17 @@
 
 from sklearn.model_selection import train_test_split
 
-import os, codecs
-import jieba
+import os
 import pickle
 import numpy as np
-import sys
+from gensim.models import word2vec
+import jieba
+import codecs
 import random
 import logging
 import json
 from tqdm import tqdm
 import nltk
-
-# from fastText import train_unsupervised
-from gensim.models import Word2Vec
-from gensim.models.word2vec import LineSentence
-from keras.utils import to_categorical
 
 random.seed(42)
 
@@ -25,25 +21,29 @@ gold_label = {'entails': 1, 'neutral': 0}
 
 
 def generate_embedding(level):
-    data_path = 'data/%s_level' % level
+    data_path = '../data/%s_level' % level
+    save_model_file = '../modfile/Word2Vec.mod'
+    save_model_name = 'sst_100_dim_all.embeddings'
+    word_size = 100
 
-    # prepare corpus
-    sentences = LineSentence(os.path.join(data_path, 'corpus_all.txt'))
+    logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+    sentences = word2vec.Text8Corpus(os.path.join(data_path, 'corpus_all.txt'))  # 加载语料
+    # 第一个参数是训练语料，第二个参数是小于该数的单词会被剔除，默认值为5, 第三个参数是神经网络的隐藏层单元数，默认为100
+    model = word2vec.Word2Vec(sentences, min_count=1, size=word_size, window=5, workers=4)
+    model.save(save_model_file)
+    model.wv.save_word2vec_format(save_model_name, binary=False)  # 以二进制类型保存模型以便重用
+
     vocab = pickle.load(open(os.path.join(data_path, 'vocabulary_all.pkl'), 'rb'))
-
-    # run model
-    model = Word2Vec(sentences, size=300, min_count=1, window=5, sg=1, iter=10)
     weights = model.wv.syn0
     d = dict([(k, v.index) for k, v in model.wv.vocab.items()])
-    emb = np.zeros(shape=(len(vocab)+2, 300), dtype='float32')
-
+    emb = np.zeros(shape=(len(vocab) + 2, 100), dtype='float32')
+    model.save('../modfile/Word2Vec.mod')
+    model.wv.save_word2vec_format('../modfile/Word2Vec.mod', binary=False)
     for w, i in vocab.items():
         if w not in d:
             continue
-        # print(d)
         emb[i, :] = weights[d[w], :]
-
-    np.save(open(os.path.join(data_path, 'xxx_300_dim_all.embeddings'), 'wb'), emb)
+    np.save(open('../modfile/sst_100_dim_all.embeddings', 'wb'), emb)
 
 
 # def generate_fasttext_embedding(level):
@@ -65,6 +65,7 @@ def generate_embedding(level):
 #     np.save(open(os.path.join(data_path, 'xxx_300_dim_all.fasttext'), 'wb'), emb)
 
 
+# 训练集、验证集划分
 def train_valid_split(raw_file):
     labels = list()
 
@@ -86,30 +87,31 @@ def train_valid_split(raw_file):
         f_valid.writelines(list(valid_lines))
 
 
+# 建立单词级别的语料库
 def build_word_level_corpus_all(train_file, valid_file, test_file):
     sentences = list()
 
     with codecs.open(train_file, encoding='utf-8') as f_train:
         lines = f_train.readlines()
         for line in lines:
-            input_a, input_b, label = line.strip().split('\t')
-            sentences.extend([input_a, input_b])
+            json_data = json.loads(line)
+            sentences.append(json_data['sent'])
 
     with codecs.open(valid_file, encoding='utf-8') as f_valid:
         lines = f_valid.readlines()
         for line in lines:
-            input_a, input_b, label = line.strip().split('\t')
-            sentences.extend([input_a, input_b])
+            json_data = json.loads(line)
+            sentences.append(json_data['sent'])
 
     with codecs.open(test_file, encoding='utf-8') as f_test:
         lines = f_test.readlines()
         for line in lines:
-            input_a, input_b, label = line.strip().split('\t')
-            sentences.extend([input_a, input_b])
+            json_data = json.loads(line)
+            sentences.append(json_data['sent'])
 
     target_lines = [' '.join([w for w in nltk.word_tokenize(sentence) if w not in stopwords]).lower() + '\n' for sentence in sentences]
 
-    with codecs.open('data/word_level/corpus_all.txt', 'w', encoding='utf-8') as f_corpus:
+    with codecs.open('../data/word_level/corpus_all.txt', 'w', encoding='utf-8') as f_corpus:
         f_corpus.writelines(target_lines)
 
 
@@ -142,32 +144,45 @@ def build_char_level_corpus_all(train_file, valid_file, test_file):
         f_corpus.writelines(target_lines)
 
 
+# 生成词典
 def build_word_level_vocabulary_all(train_file, valid_file, test_file):
     sentences = list()
 
     with codecs.open(train_file, encoding='utf-8') as f_train:
         lines = f_train.readlines()
         for line in lines:
-            input_a, input_b, label = line.strip().split('\t')
-            sentences.extend(nltk.word_tokenize(input_a.lower()) + nltk.word_tokenize(input_b.lower()))
+            json_data = json.loads(line)
+            sentences.extend(nltk.word_tokenize(json_data['sent']))
 
     with codecs.open(valid_file, encoding='utf-8') as f_valid:
         lines = f_valid.readlines()
         for line in lines:
-            input_a, input_b, label = line.strip().split('\t')
-            sentences.extend(nltk.word_tokenize(input_a.lower()) + nltk.word_tokenize(input_b.lower()))
+            json_data = json.loads(line)
+            sentences.extend(nltk.word_tokenize(json_data['sent']))
 
     with codecs.open(test_file, encoding='utf-8') as f_test:
         lines = f_test.readlines()
         for line in lines:
-            input_a, input_b, label = line.strip().split('\t')
-            sentences.extend(nltk.word_tokenize(input_a.lower()) + nltk.word_tokenize(input_b.lower()))
+            json_data = json.loads(line)
+            sentences.extend(nltk.word_tokenize(json_data['sent']))
 
     word_list = list(set(sentences))
     print(len(word_list))
     word_list = [word for word in word_list if word not in stopwords]
 
     return dict((word, idx+1) for idx, word in enumerate(word_list))
+
+
+def build_word_level_vocabulary_from_out_corpus(raw_file, out_file):
+    sentences = list()
+    with codecs.open(raw_file, encoding='utf-8') as f_test:
+        lines = f_test.readlines()
+        for line in lines:
+            sentence_cut = jieba.cut(line)
+            sentences.append(' '.join(sentence_cut))
+
+    with codecs.open(out_file, 'w', encoding='utf-8') as outfile:
+        outfile.writelines(sentences)
 
 
 def build_char_level_vocabulary_all(train_file, valid_file, test_file):
@@ -313,19 +328,22 @@ def load_sentence(x, y):
 
 if __name__ == '__main__':
 
-    vocab = build_word_level_vocabulary_all('data/xxx_train.tsv', 'data/xxx_dev.tsv', 'data/xxx_test.tsv')
-    with open('data/word_level/vocabulary_all.pkl', 'wb') as vocabulary_pkl:
-        pickle.dump(vocab, vocabulary_pkl, -1)
-        print(len(vocab))
-    build_word_level_corpus_all('data/xxx_train.tsv', 'data/xxx_dev.tsv', 'data/xxx_test.tsv')
+    # vocab = build_word_level_vocabulary_all('../data/sent_train.txt', '../data/sent_dev.txt', '../data/sent_test.txt')
+    # with open('../data/word_level/vocabulary_origin_all.pkl', 'wb') as vocabulary_pkl:
+    #     pickle.dump(vocab, vocabulary_pkl, -1)
+    #     print(len(vocab))
+
+    # build_word_level_corpus_all('../data/sent_train.txt', '../data/sent_dev.txt', '../data/sent_test.txt')
+    # 引入外部数据集
+    # build_word_level_vocabulary_from_out_corpus('../raw_data/open_data/text.txt', '../data/word_level/text.txt')
     generate_embedding('word')
     # generate_fasttext_embedding('word')
 
-    vocab = build_char_level_vocabulary_all('data/xxx_train.jsonl', 'data/xxx_dev.jsonl', 'data/xxx_test.jsonl')
-    with open('data/char_level/vocabulary_all.pkl', 'wb') as vocabulary_pkl:
-        pickle.dump(vocab, vocabulary_pkl, -1)
-        print(len(vocab))
-    build_char_level_corpus_all('data/xxx_train.jsonl', 'data/xxx_dev.jsonl', 'data/xxx_test.jsonl')
-    generate_embedding('char')
-    # generate_fasttext_embedding('char')
+    # vocab = build_char_level_vocabulary_all('data/xxx_train.jsonl', 'data/xxx_dev.jsonl', 'data/xxx_test.jsonl')
+    # with open('data/char_level/vocabulary_all.pkl', 'wb') as vocabulary_pkl:
+    #     pickle.dump(vocab, vocabulary_pkl, -1)
+    #     print(len(vocab))
+    # build_char_level_corpus_all('data/xxx_train.jsonl', 'data/xxx_dev.jsonl', 'data/xxx_test.jsonl')
+    # generate_embedding('char')
+    # # generate_fasttext_embedding('char')
 
