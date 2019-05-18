@@ -45,7 +45,7 @@ def cnn_base(x_train, y_train, x_valid, y_valid, x_test, level, overwrite=False)
     # 模型训练
     print('Create the cnn model...')
     cnn_model.cnn_base()
-    if overwrite or not os.path.exists(os.path.join(config.checkpoint_dir, '%s.hdf5' % config.exp_name)):
+    if overwrite or not os.path.exists(os.path.join(config.checkpoint_dir, '%s.hdf5' % model_name)):
         print('Start training the cnn model...')
         cnn_model.fit(x_train, y_train, x_valid, y_valid)
     cnn_model.load_weight()
@@ -84,7 +84,7 @@ def bilstm_base(x_train, y_train, x_valid, y_valid, x_test, level, overwrite=Fal
     # 模型训练
     print('Create the bilstm model...')
     cnn_model.bilstm_base()
-    if overwrite or not os.path.exists(os.path.join(config.checkpoint_dir, '%s.hdf5' % config.exp_name)):
+    if overwrite or not os.path.exists(os.path.join(config.checkpoint_dir, '%s.hdf5' % model_name)):
         print('Start training the bilstm model...')
         cnn_model.fit(x_train, y_train, x_valid, y_valid)
     cnn_model.load_weight()
