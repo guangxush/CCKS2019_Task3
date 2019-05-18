@@ -31,7 +31,8 @@ class Config(object):
         self.char_per_word = 10
         self.embedding_path = "modfile"
         self.embedding_file = 'sst_100_dim_all.'
-        self.result_file = './result/result_sent.txt'
+        self.result_file = './result/result_sent'
+        self.score_path = './result/score.md'
         self.embedding_dim = 300
         self.dropout = 0.1
         self.features_len = 0

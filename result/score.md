@@ -1,0 +1,2 @@
+|model|precision|recall|f1|auc|accuracy|                                                                                                                                                               
+|---------|:---:|:----:|:--:|:--:|:--:|

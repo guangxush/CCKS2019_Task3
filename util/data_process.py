@@ -20,6 +20,7 @@ stopwords = [u'', u' ', '\t', '.', '=']
 gold_label = {'entails': 1, 'neutral': 0}
 
 
+# 训练词向量得到embedding
 def generate_embedding(level):
     data_path = '../data/%s_level' % level
     save_model_file = '../modfile/Word2Vec.mod'
@@ -27,6 +28,7 @@ def generate_embedding(level):
     word_size = 100
 
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+    # 输入的语料是用jieba分好词的文本
     sentences = word2vec.Text8Corpus(os.path.join(data_path, 'corpus_all.txt'))  # 加载语料
     # 第一个参数是训练语料，第二个参数是小于该数的单词会被剔除，默认值为5, 第三个参数是神经网络的隐藏层单元数，默认为100
     model = word2vec.Word2Vec(sentences, min_count=1, size=word_size, window=5, workers=4)
@@ -35,10 +37,12 @@ def generate_embedding(level):
 
     vocab = pickle.load(open(os.path.join(data_path, 'vocabulary_all.pkl'), 'rb'))
     weights = model.wv.syn0
+    # 得到词向量字典
     d = dict([(k, v.index) for k, v in model.wv.vocab.items()])
-    emb = np.zeros(shape=(len(vocab) + 2, 100), dtype='float32')
+    emb = np.zeros(shape=(len(vocab) + 2, word_size), dtype='float32')
     model.save('../modfile/Word2Vec.mod')
     model.wv.save_word2vec_format('../modfile/Word2Vec.mod', binary=False)
+    # vocab 形式： {word : index}
     for w, i in vocab.items():
         if w not in d:
             continue
@@ -107,10 +111,11 @@ def build_word_level_corpus_all(train_file, valid_file, test_file):
 
     target_lines = [' '.join([w for w in nltk.word_tokenize(sentence) if w not in stopwords]).lower() + '\n' for sentence in sentences]
 
-    with codecs.open('../data/word_level/corpus_all.txt', 'w', encoding='utf-8') as f_corpus:
+    with codecs.open('../data/word_level/raw_corpus_all.txt', 'w', encoding='utf-8') as f_corpus:
         f_corpus.writelines(target_lines)
 
 
+# 建立字符级别的语料，目前暂时不用
 def build_char_level_corpus_all(train_file, valid_file, test_file):
     sentences = list()
 
@@ -140,14 +145,14 @@ def build_char_level_corpus_all(train_file, valid_file, test_file):
         f_corpus.writelines(target_lines)
 
 
-# 生成词典
+# 生成词典，获取训练集，验证集，测试集的单词
 def build_word_level_vocabulary_all(train_file, valid_file, test_file):
     sentences = list()
-
     with codecs.open(train_file, encoding='utf-8') as f_train:
         lines = f_train.readlines()
         for line in lines:
             json_data = json.loads(line)
+            # 对句子进行分词
             sentences.extend(nltk.word_tokenize(json_data['sent']))
 
     with codecs.open(valid_file, encoding='utf-8') as f_valid:
@@ -162,25 +167,31 @@ def build_word_level_vocabulary_all(train_file, valid_file, test_file):
             json_data = json.loads(line)
             sentences.extend(nltk.word_tokenize(json_data['sent']))
 
+    # 转换成集合，去掉重复词
     word_list = list(set(sentences))
     print(len(word_list))
     word_list = [word for word in word_list if word not in stopwords]
-
+    # 转换成字典并返回
     return dict((word, idx+1) for idx, word in enumerate(word_list))
 
 
+# 从外部语料中建立单词级别的语料
 def build_word_level_vocabulary_from_out_corpus(raw_file, out_file):
     sentences = list()
     with codecs.open(raw_file, encoding='utf-8') as f_test:
         lines = f_test.readlines()
         for line in lines:
+            # 分词
             sentence_cut = jieba.cut(line)
+            # 转换成词向量训练时的格式，单词与单词之间空格分隔
             sentences.append(' '.join(sentence_cut))
 
+    # 保存到外部文件中，方便训练词向量使用
     with codecs.open(out_file, 'w', encoding='utf-8') as outfile:
         outfile.writelines(sentences)
 
 
+# 字级别的语料，这里暂时不用
 def build_char_level_vocabulary_all(train_file, valid_file, test_file):
     sentences = list()
 
@@ -208,6 +219,7 @@ def build_char_level_vocabulary_all(train_file, valid_file, test_file):
     return dict((char, idx+1) for idx, char in enumerate(char_list))
 
 
+# 获得标签
 def load_label(raw_file):
     y = list()
     with codecs.open(raw_file, encoding='utf-8') as f_train:
@@ -218,36 +230,37 @@ def load_label(raw_file):
     return y
 
 
+# 获取原始数据
 def load_raw_data(raw_file, test=False):
     with open('data/word_level/vocabulary.pkl', 'rb') as f_vocabulary:
         vocabulary = pickle.load(f_vocabulary)
     if test:
-        x_a = list()
-        x_b = list()
+        x = list()
         with codecs.open(raw_file, encoding='utf-8') as f_test:
             lines = f_test.readlines()
             for line in lines:
-                input_a, input_b, label = line.strip().split('\t')
-                x_a.append([word for word in jieba.cut(input_a)])
-                x_b.append([word for word in jieba.cut(input_b)])
-        return x_a, x_b, vocabulary
+                json_data = json.loads(line)
+                x.append([word for word in jieba.cut(json_data['sent'])])
+        return x, vocabulary
     else:
-        x_a = list()
-        x_b = list()
+        x = list()
         y = list()
         with codecs.open(raw_file, encoding='utf-8') as f_train:
             lines = f_train.readlines()
             for line in lines:
-                input_a, input_b, label = line.strip().split('\t')
-                label = gold_label[label]
-                x_a.append([word for word in nltk.word_tokenize(input_a)])
-                x_b.append([word for word in nltk.word_tokenize(input_b)])
+                json_data = json.loads(line)
+                x.append([word for word in jieba.cut(json_data['sent'])])
+                label = json_data['label']
+                # 31 4这种标签单独处理，只保留第一个
+                if len(label.split(' ')) > 1:
+                    label = label.split(' ')[0]
                 y.append(float(label))
-        return x_a, x_b, y, vocabulary
+        return x, y, vocabulary
 
 
+# 根据不同的文件类型加载数据
 def load_data(raw_file, level):
-
+    # 字符级别的训练集和验证集
     if level == 'word':
         with open('data/word_level/vocabulary_all.pkl', 'rb') as f_vocabulary:
             vocabulary = pickle.load(f_vocabulary)
@@ -278,9 +291,10 @@ def load_data(raw_file, level):
             if len(word) > max_len:
                 max_len = len(word)
             avg_len += len(word)
-        print('char_max_len:', max_len)
-        print('char_avg_len:', float(avg_len)/len(vocabulary))
+        print('word_max_len:', max_len)
+        print('word_avg_len:', float(avg_len)/len(vocabulary))
         return x, y, vocabulary
+    # 字符级别暂时不用
     elif level == 'char':
         with open('data/char_level/vocabulary_all.pkl', 'rb') as f_vocabulary:
             vocabulary = pickle.load(f_vocabulary)
@@ -307,7 +321,7 @@ def load_data(raw_file, level):
         print('avg_char_len:', float(char_len) / (len(x)*2))
         print('max_char_len:', max_len)
         return x, y, vocabulary
-
+    # 测试集数据加载
     elif level == 'test':
         with open('data/word_level/vocabulary_all.pkl', 'rb') as f_vocabulary:
             vocabulary = pickle.load(f_vocabulary)
@@ -351,17 +365,23 @@ def load_sentence(x, y):
 
 if __name__ == '__main__':
 
-    # vocab = build_word_level_vocabulary_all('../data/sent_train.txt', '../data/sent_dev.txt', '../data/sent_test.txt')
-    # with open('../data/word_level/vocabulary_origin_all.pkl', 'wb') as vocabulary_pkl:
-    #     pickle.dump(vocab, vocabulary_pkl, -1)
-    #     print(len(vocab))
+    vocab = build_word_level_vocabulary_all('../data/sent_train.txt', '../data/sent_dev.txt', '../data/sent_test.txt')
+    with open('../data/word_level/vocabulary_origin_all.pkl', 'wb') as vocabulary_pkl:
+        pickle.dump(vocab, vocabulary_pkl, -1)
+        print(len(vocab))
 
+    # 这次暂时不用，本来外部语料就很多了
     # build_word_level_corpus_all('../data/sent_train.txt', '../data/sent_dev.txt', '../data/sent_test.txt')
+
     # 引入外部数据集
-    # build_word_level_vocabulary_from_out_corpus('../raw_data/open_data/text.txt', '../data/word_level/text.txt')
+    build_word_level_vocabulary_from_out_corpus('../raw_data/open_data/text.txt', '../data/word_level/text.txt')
+    # 训练词向量
     generate_embedding('word')
+
+    # fasttext暂时不用
     # generate_fasttext_embedding('word')
 
+    # 字符级别的暂时不用
     # vocab = build_char_level_vocabulary_all('data/xxx_train.jsonl', 'data/xxx_dev.jsonl', 'data/xxx_test.jsonl')
     # with open('data/char_level/vocabulary_all.pkl', 'wb') as vocabulary_pkl:
     #     pickle.dump(vocab, vocabulary_pkl, -1)

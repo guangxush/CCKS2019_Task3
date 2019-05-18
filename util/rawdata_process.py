@@ -1,9 +1,9 @@
 # -*- coding:utf-8 -*-
 import codecs
 import json
-import jieba
 
 
+# 将多个文件的训练数据合并转化成json格式便于处理
 def generate_json_data(sent_file, label_file, out_file, flag):
     if flag != 'test':
         with codecs.open(sent_file, encoding='utf-8') as sent, codecs.open(label_file, encoding='utf-8') as label, codecs.open(out_file, 'w', encoding='utf-8') as fw:

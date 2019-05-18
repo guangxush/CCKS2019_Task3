@@ -16,6 +16,7 @@ from keras.utils import to_categorical
 
 import os
 import numpy as np
+import codecs
 
 
 def euclidean_distance(vectors):
@@ -293,7 +294,8 @@ class Models(object):
             valid_features=None):
         x_train = self.pad(x_train)
         x_valid = self.pad(x_valid)
-        # 结果集one-hot
+
+        # 结果集one-hot，不能直接使用数字作为标签
         y_train = to_categorical(y_train)
         y_valid = to_categorical(y_valid)
 
@@ -312,6 +314,7 @@ class Models(object):
                            validation_data=([x_valid, valid_features], y_valid),
                            callbacks=self.callbacks)
         else:
+            # 初始化回调函数并用其训练
             self.init_callbacks()
             self.model.fit(x_train, y_train,
                            epochs=self.config.num_epochs,
@@ -328,20 +331,24 @@ class Models(object):
             y_pred = self.model.predict(x, batch_size=100, verbose=1)
         return y_pred
 
-    def evaluate(self, y_pred, y_true):
+    def evaluate(self, model_name, y_pred, y_true):
+        score_path = self.config.score_path
+        fw = codecs.open(score_path, 'a', encoding='utf-8')
         y_pred = [np.argmax(y) for y in y_pred]
         precision = precision_score(y_true, y_pred, average='micro')
         recall = recall_score(y_true, y_pred, average='micro')
         f1 = f1_score(y_true, y_pred, average='micro')
         accuracy = accuracy_score(y_true, y_pred)
-        # auc = roc_auc_score(y_true, y_pred, average='micro')
-        print('\n- **Evaluation results of %s Categorical mixed model**' % self.config.exp_name)
+        auc = categorical_metrics.multiclass_roc_auc_score(y_true, y_pred, average="weighted")
+        print('\n- **Evaluation results of %s model**' % model_name)
         print('Precision:', precision)
         print('Recall:', recall)
         print('F1:', f1)
+        print('AUC:', auc)
         print('Accuracy:', accuracy)
-        # print 'Auc:', auc
-        return precision, recall, f1, accuracy  # , auc
+        fw.write("|%s|%.4f|%.4f|%.4f|%.4f|%.4f|\n" % (model_name, precision, recall, f1, auc, accuracy))
+        fw.close()
+        return precision, recall, f1, auc, accuracy
 
 
 
