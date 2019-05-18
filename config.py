@@ -38,3 +38,4 @@ class Config(object):
         self.features_len = 0
         self.features = []
         self.classes = 35
+        self.classes_multi = 2

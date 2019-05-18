@@ -1,22 +1,33 @@
 # -*- encoding:utf-8 -*-
 import os
-from util.data_process import load_data
+from util.data_process import load_data, load_data_multi
 from models import models as Models
 from config import Config
 import numpy as np
 import time
+import sys
 
 
 # 获取数据
-def get_data(train_file=None, valid_file=None, test_file=None, flag='train'):
-    if flag == 'train':
-        x_train, y_train, vocabulary = load_data(train_file, 'word')
-        x_valid, y_valid, vocabulary = load_data(valid_file, 'word')
-        ids, x_test, vocabulary = load_data(test_file, 'test')
-        return x_train, y_train, x_valid, y_valid, x_test, vocabulary, ids
-    elif flag == 'test':
-        ids, x_test, vocabulary = load_data(test_file, 'test')
-        return x_test, vocabulary, ids
+def get_data(train_file=None, valid_file=None, test_file=None, flag='train', is_multi=False):
+    if multi_flag:
+        if flag == 'train':
+            x_train, y_train, y_train2, vocabulary = load_data_multi(train_file, 'word')
+            x_valid, y_valid, y_valid2, vocabulary = load_data_multi(valid_file, 'word')
+            ids, x_test, vocabulary = load_data(test_file, 'test')
+            return x_train, y_train, y_train2, x_valid, y_valid, y_valid2, x_test, vocabulary, ids
+        elif flag == 'test':
+            ids, x_test, vocabulary = load_data_multi(test_file, 'test')
+            return x_test, vocabulary, ids
+    else:
+        if flag == 'train':
+            x_train, y_train, vocabulary = load_data(train_file, 'word')
+            x_valid, y_valid, vocabulary = load_data(valid_file, 'word')
+            ids, x_test, vocabulary = load_data(test_file, 'test')
+            return x_train, y_train, x_valid, y_valid, x_test, vocabulary, ids
+        elif flag == 'test':
+            ids, x_test, vocabulary = load_data(test_file, 'test')
+            return x_test, vocabulary, ids
 
 
 # 创建模型
@@ -97,6 +108,45 @@ def bilstm_base(x_train, y_train, x_valid, y_valid, x_test, level, overwrite=Fal
     return y_test_pred
 
 
+# 创建模型
+def cnn_multi_base(x_train, y_train, y_train2,  x_valid, y_valid, y_valid2, x_test, level, overwrite=False):
+    config = Config()
+    config.level = level
+    model_name = 'cnn_multi_base'
+    if level == 'word':
+        # 固定最大长度，多余的截取掉，不足的用0填充
+        config.max_len = config.max_len_word
+        config.vocab_len = config.vocab_len_word
+    else:
+        config.max_len = config.max_len_char
+        config.vocab_len = config.vocab_len_char
+    config.exp_name = 'cnn_multi_base_' + level
+
+    # 训练的模型保存成文件的形式
+    if not os.path.exists(config.checkpoint_dir):
+        os.makedirs(config.checkpoint_dir)
+
+    # 获取词向量文件
+    config.embedding_file += 'embeddings'
+    # 载入配置文件
+    cnn_model = Models.Models(config)
+
+    # 模型训练
+    print('Create the cnn multi model...')
+    cnn_model.cnn_multi()
+    if overwrite or not os.path.exists(os.path.join(config.checkpoint_dir, '%s.hdf5' % model_name)):
+        print('Start training the cnn multi model...')
+        cnn_model.fit_multi(x_train, y_train, y_train2, x_valid, y_valid, y_valid2)
+    cnn_model.load_weight()
+    print('Start evaluate the cnn multi model...')
+    y_valid_pred = cnn_model.predict_multi(x_valid)
+    y_test_pred = cnn_model.predict_multi(x_test)
+    cnn_model.evaluate(model_name, y_valid_pred, y_valid)
+    print('Start generate the cnn multi model...')
+
+    return y_test_pred
+
+
 # 生成预测结果
 def generate_result(ids, y_test_pred):
     config = Config()
@@ -115,14 +165,27 @@ def generate_result(ids, y_test_pred):
 
 
 if __name__ == '__main__':
-    level = 'word'
-    fasttext = False
-    overwrite = False
-    print('Load %s_level data...' % level)
-    x_train, y_train, x_valid, y_valid, x_test, vocab, ids = \
-        get_data(train_file='./data/sent_train.txt', valid_file='./data/sent_dev.txt',
-                 test_file='./data/sent_test.txt', flag='train')
-    # y_test_pred = cnn_base(x_train, y_train, x_valid, y_valid, x_test, level, overwrite=overwrite)
-    y_test_pred = bilstm_base(x_train, y_train, x_valid, y_valid, x_test, level, overwrite=overwrite)
-    generate_result(ids, y_test_pred)
+    multi_flag = True if sys.argv[1] == 'multi' else False
+    # 多任务方法
+    if multi_flag:
+        level = 'word'
+        fasttext = False
+        overwrite = False
+        print('Load %s_level data...' % level)
+        x_train, y_train, y_train2, x_valid, y_valid, y_valid2, x_test, vocabulary, ids = \
+            get_data(train_file='./data/sent_train.txt', valid_file='./data/sent_dev.txt',
+                     test_file='./data/sent_test.txt', flag='train', is_multi=multi_flag)
+        # y_test_pred = cnn_base(x_train, y_train, x_valid, y_valid, x_test, level, overwrite=overwrite)
+        y_test_pred = cnn_multi_base(x_train, y_train, y_train2, x_valid, y_valid, y_valid2, x_test, level, overwrite=overwrite)
+        generate_result(ids, y_test_pred)
+    else:
+        level = 'word'
+        fasttext = False
+        overwrite = False
+        print('Load %s_level data...' % level)
+        x_train, y_train, x_valid, y_valid, x_test, vocab, ids = \
+            get_data(train_file='./data/sent_train.txt', valid_file='./data/sent_dev.txt',
+                     test_file='./data/sent_test.txt', flag='train')
+        y_test_pred = cnn_base(x_train, y_train, x_valid, y_valid, x_test, level, overwrite=overwrite)
+        generate_result(ids, y_test_pred)
 

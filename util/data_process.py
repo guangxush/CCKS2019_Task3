@@ -353,6 +353,107 @@ def load_data(raw_file, level):
         return ids, x, vocabulary
 
 
+# 根据不同的文件类型加载数据
+def load_data_multi(raw_file, level):
+    # 字符级别的训练集和验证集
+    if level == 'word':
+        with open('data/word_level/vocabulary_all.pkl', 'rb') as f_vocabulary:
+            vocabulary = pickle.load(f_vocabulary)
+        print('vocab_len_word:', len(vocabulary))
+        x = list()
+        y = list()
+        y2 = list()
+        max_len = 0
+        with codecs.open(raw_file, encoding='utf-8') as f_train:
+            lines = f_train.readlines()
+            print(lines[0])
+            for line in tqdm(lines):
+                json_data = json.loads(line)
+                input = json_data['sent']
+                label = json_data['label']
+                label2 = json_data['label2']
+                # 31 4这种标签单独处理
+                if len(label.split(' ')) > 1:
+                    label = label.split(' ')[0]
+
+                words = nltk.word_tokenize(input)
+                x.append([vocabulary.get(word, len(vocabulary) + 1) for word in words if word not in stopwords])
+                y.append(float(label))
+                y2.append(float(label2))
+                if len(x[-1]) > max_len:
+                    max_len = len(x[-1])
+        print('max_word_len', max_len)
+        avg_len = 0
+        max_len = 0
+        for word, id in vocabulary.items():
+            if len(word) > max_len:
+                max_len = len(word)
+            avg_len += len(word)
+        print('word_max_len:', max_len)
+        print('word_avg_len:', float(avg_len)/len(vocabulary))
+        return x, y, y2, vocabulary
+    # 字符级别暂时不用
+    elif level == 'char':
+        with open('data/char_level/vocabulary_all.pkl', 'rb') as f_vocabulary:
+            vocabulary = pickle.load(f_vocabulary)
+        print('vocab_len_char:', len(vocabulary))
+        x = list()
+        y = list()
+        y2 = list()
+        char_len = 0
+        max_len = 0
+        with codecs.open(raw_file, encoding='utf-8') as f_train:
+            lines = f_train.readlines()
+            print(lines[0])
+            for line in tqdm(lines):
+                json_data = json.loads(line)
+                input = json_data['sent']
+                label = json_data['label']
+                label2 = json_data['label2']
+                if len(label.split(' ')) > 1:
+                    label = label.split(' ')[0]
+                x.append([vocabulary.get(char, len(vocabulary) + 1) for char in input if char not in stopwords])
+                y.append(float(label))
+                y2.append(float(label2))
+                char_len = len(x[-1])
+                if len(x[-1]) > max_len:
+                    max_len = len(x[-1])
+
+        print('avg_char_len:', float(char_len) / (len(x)*2))
+        print('max_char_len:', max_len)
+        return x, y, y2, vocabulary
+    # 测试集数据加载
+    elif level == 'test':
+        with open('data/word_level/vocabulary_all.pkl', 'rb') as f_vocabulary:
+            vocabulary = pickle.load(f_vocabulary)
+        print('vocab_len_word:', len(vocabulary))
+        x = list()
+        ids = list()
+        max_len = 0
+        with codecs.open(raw_file, encoding='utf-8') as f_train:
+            lines = f_train.readlines()
+            print(lines[0])
+            for line in tqdm(lines):
+                json_data = json.loads(line)
+                input = json_data['sent']
+                test_id = json_data['id'].strip('\"')
+                ids.append(test_id)
+                words = nltk.word_tokenize(input)
+                x.append([vocabulary.get(word, len(vocabulary) + 1) for word in words if word not in stopwords])
+                if len(x[-1]) > max_len:
+                    max_len = len(x[-1])
+        print('max_word_len', max_len)
+        avg_len = 0
+        max_len = 0
+        for word, id in vocabulary.items():
+            if len(word) > max_len:
+                max_len = len(word)
+            avg_len += len(word)
+        print('char_max_len:', max_len)
+        print('char_avg_len:', float(avg_len) / len(vocabulary))
+        return ids, x, vocabulary
+
+
 def load_sentence(x, y):
     with open('data/word_level/vocabulary_all.pkl', 'rb') as f_vocabulary:
         vocabulary = pickle.load(f_vocabulary)

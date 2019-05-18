@@ -265,6 +265,7 @@ class Models(object):
     #     self.model.compile(loss='categorical_crossentropy', optimizer=self.config.optimizer,
     #                            metrics=['accuracy'])
 
+    # cnn基本demo
     def cnn_base(self):
         sentence = Input(shape=(self.config.max_len,), dtype='int32', name='sent_base')
         weights = np.load(os.path.join(self.config.embedding_path, self.config.embedding_file))
@@ -286,6 +287,7 @@ class Models(object):
         self.model.compile(loss='categorical_crossentropy', optimizer=self.config.optimizer,
                            metrics=['acc'])
 
+    # 双向lstm基本demo
     def bilstm_base(self):
         sentence = Input(shape=(self.config.max_len,), dtype='int32', name='sent_base')
         weights = np.load(os.path.join(self.config.embedding_path, self.config.embedding_file))
@@ -302,6 +304,33 @@ class Models(object):
         self.model = Model(inputs=inputs, outputs=output)
         self.model.compile(loss='categorical_crossentropy', optimizer=self.config.optimizer,
                            metrics=['acc'])
+
+    # 多任务模型
+    def cnn_multi(self):
+        sentence = Input(shape=(self.config.max_len,), dtype='int32', name='sent_base')
+        weights = np.load(os.path.join(self.config.embedding_path, self.config.embedding_file))
+        embedding_layer = Embedding(input_dim=weights.shape[0],
+                                    output_dim=weights.shape[-1],
+                                    weights=[weights], name='embedding_layer', trainable=True)
+        sent_embedding = embedding_layer(sentence)
+        filter_length = [2, 3, 4, 5]
+        conv_layer = Conv1D(filters=100, kernel_size=filter_length, padding='valid', strides=1, activation='relu')
+        sent_c = conv_layer(sent_embedding)
+        sent_maxpooling = MaxPooling1D(pool_size=self.config.max_len - filter_length + 1)(sent_c)
+        sent_conv = Flatten()(sent_maxpooling)
+        sent_conv = Activation('relu')(sent_conv)
+        sent = Dropout(0.5)(sent_conv)
+        # 多任务输出
+        output = Dense(self.config.classes, activation='softmax', name='output')(sent)
+        output2 = Dense(self.config.classes_multi, activation='softmax', name='output2')(sent)
+
+        inputs = [sentence]
+        outputs = [output, output2]
+        self.model = Model(inputs=inputs, outputs=outputs)
+        self.model.compile(loss={'output': 'categorical_crossentropy', 'output2': 'categorical_crossentropy'},
+                           optimizer=self.config.optimizer,
+                           loss_weights={'output': 1., 'output2': 1.},
+                           metrics={'output': ['acc'], 'output2': ['acc']})
 
     def pad(self, x_data):
         return pad_sequences(x_data, maxlen=self.config.max_len, padding='post', truncating='post')
@@ -339,12 +368,52 @@ class Models(object):
                            validation_data=(x_valid, y_valid),
                            callbacks=self.callbacks)
 
+    def fit_multi(self, x_train, y_train, y_train2, x_valid, y_valid, y_valid2, train_features=None,
+                  valid_features=None):
+        x_train = self.pad(x_train)
+        x_valid = self.pad(x_valid)
+
+        # 结果集one-hot，不能直接使用数字作为标签
+        y_train = to_categorical(y_train)
+        y_train2 = to_categorical(y_train2)
+        y_valid = to_categorical(y_valid)
+        y_valid2 = to_categorical(y_valid2)
+
+        self.callbacks = []
+        if train_features is not None:
+            train_features = np.asarray(train_features)
+            valid_features = np.asarray(valid_features)
+            self.init_callbacks()
+            self.model.fit([x_train, train_features], y_train,
+                           epochs=self.config.num_epochs,
+                           verbose=self.config.verbose_training,
+                           batch_size=self.config.batch_size,
+                           validation_data=([x_valid, valid_features], y_valid),
+                           callbacks=self.callbacks)
+        else:
+            # 初始化回调函数并用其训练
+            self.init_callbacks()
+            self.model.fit(x_train, y_train, y_train2,
+                           epochs=self.config.num_epochs,
+                           verbose=self.config.verbose_training,
+                           batch_size=self.config.batch_size,
+                           validation_data=(x_valid, y_valid, y_valid2),
+                           callbacks=self.callbacks)
+
     def predict(self, x, x_features=None):
         x = self.pad(x)
         if x_features is not None:
             y_pred = self.model.predict([x, x_features], batch_size=100, verbose=1)
         else:
             y_pred = self.model.predict(x, batch_size=100, verbose=1)
+        return y_pred
+
+    def predict_multi(self, x, x_features=None):
+        x = self.pad(x)
+        if x_features is not None:
+            y_pred = self.model.predict([x, x_features], batch_size=100, verbose=1)[0]
+        else:
+            y_pred = self.model.predict(x, batch_size=100, verbose=1)[0]
         return y_pred
 
     def evaluate(self, model_name, y_pred, y_true):
