@@ -273,7 +273,7 @@ class Models(object):
                                     output_dim=weights.shape[-1],
                                     weights=[weights], name='embedding_layer', trainable=True)
         sent_embedding = embedding_layer(sentence)
-        filter_length = [2, 3, 4, 5]
+        filter_length = 3
         conv_layer = Conv1D(filters=100, kernel_size=filter_length, padding='valid', strides=1, activation='relu')
         sent_c = conv_layer(sent_embedding)
         sent_maxpooling = MaxPooling1D(pool_size=self.config.max_len - filter_length + 1)(sent_c)
@@ -313,7 +313,7 @@ class Models(object):
                                     output_dim=weights.shape[-1],
                                     weights=[weights], name='embedding_layer', trainable=True)
         sent_embedding = embedding_layer(sentence)
-        filter_length = [2, 3, 4, 5]
+        filter_length = 3
         conv_layer = Conv1D(filters=100, kernel_size=filter_length, padding='valid', strides=1, activation='relu')
         sent_c = conv_layer(sent_embedding)
         sent_maxpooling = MaxPooling1D(pool_size=self.config.max_len - filter_length + 1)(sent_c)
