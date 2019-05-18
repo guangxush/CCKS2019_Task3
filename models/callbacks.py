@@ -77,7 +77,7 @@ class CategoricalMetricsMulti(Callback):
         self.val_acc = []
 
     def on_epoch_end(self, epoch, logs={}):
-        valid_results = self.model.predict_multi([self.validation_data[0]])
+        valid_results = self.model.predict([self.validation_data[0]])[0]
         valid_y_pred = np.argmax(valid_results, axis=1)
         valid_y_pred.astype(int)
         valid_y = self.validation_data[1]
