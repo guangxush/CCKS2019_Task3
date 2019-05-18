@@ -3,7 +3,7 @@
 from keras.engine import Input
 from keras.layers import Embedding, Dropout, Conv1D, Conv2D, MaxPooling2D, Lambda, LSTM, CuDNNLSTM, Dense, concatenate, \
     TimeDistributed, Bidirectional, GlobalMaxPool1D, GlobalAvgPool1D, Reshape, Flatten, Activation, BatchNormalization, \
-    Dot, Permute, Multiply, Add, RepeatVector, GlobalMaxPooling1D, MaxPooling1D, ZeroPadding1D
+    Dot, Permute, Multiply, Add, RepeatVector, GlobalMaxPooling1D, MaxPooling1D, ZeroPadding1D, SpatialDropout1D
 from keras.activations import softmax
 from keras import backend as K
 from keras.preprocessing.sequence import pad_sequences
@@ -271,17 +271,33 @@ class Models(object):
         embedding_layer = Embedding(input_dim=weights.shape[0],
                                     output_dim=weights.shape[-1],
                                     weights=[weights], name='embedding_layer', trainable=True)
-        sent_embedding = embedding_layer(sentence)
+        sent_embedding = SpatialDropout1D(0.2)(embedding_layer)
 
-        filter_length = 3
-        conv_layer = Conv1D(filters=100, kernel_size=filter_length, padding='valid', strides=1)
+        filter_length = [2, 3, 4, 5]
+        conv_layer = Conv1D(filters=100, kernel_size=filter_length, padding='valid', strides=1, activation='relu')
         sent_c = conv_layer(sent_embedding)
         sent_maxpooling = MaxPooling1D(pool_size=self.config.max_len - filter_length + 1)(sent_c)
         sent_conv = Flatten()(sent_maxpooling)
-        sent_conv = Activation('tanh')(sent_conv)
+        sent_conv = Activation('relu')(sent_conv)
         sent = Dropout(0.5)(sent_conv)
-        output = Dense(35, activation='softmax', name='output')(sent)
+        output = Dense(self.config.classes, activation='softmax', name='output')(sent)
 
+        inputs = [sentence]
+        self.model = Model(inputs=inputs, outputs=output)
+        self.model.compile(loss='categorical_crossentropy', optimizer=self.config.optimizer,
+                           metrics=['acc'])
+
+    def bilstm_base(self):
+        sentence = Input(shape=(self.config.max_len,), dtype='int32', name='sent_base')
+        weights = np.load(os.path.join(self.config.embedding_path, self.config.embedding_file))
+        embedding_layer = Embedding(input_dim=weights.shape[0],
+                                    output_dim=weights.shape[-1],
+                                    weights=[weights], name='embedding_layer', trainable=True)
+        sent_embedding = SpatialDropout1D(0.2)(embedding_layer)
+        bilstm_layer = Bidirectional(LSTM(128))(sent_embedding)
+
+        sent = Dropout(0.5)(bilstm_layer)
+        output = Dense(self.config.classes, activation='softmax', name='output')(sent)
         inputs = [sentence]
         self.model = Model(inputs=inputs, outputs=output)
         self.model.compile(loss='categorical_crossentropy', optimizer=self.config.optimizer,

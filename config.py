@@ -37,3 +37,4 @@ class Config(object):
         self.dropout = 0.1
         self.features_len = 0
         self.features = []
+        self.classes = 35
