@@ -414,11 +414,11 @@ class Models(object):
         else:
             # 初始化回调函数并用其训练
             self.init_callbacks_multi()
-            self.model.fit(x_train, y_train, y_train2,
+            self.model.fit(x_train, [y_train, y_train2],
                            epochs=self.config.num_epochs,
                            verbose=self.config.verbose_training,
                            batch_size=self.config.batch_size,
-                           validation_data=(x_valid, y_valid, y_valid2),
+                           validation_data=(x_valid, [y_valid, y_valid2]),
                            callbacks=self.callbacks)
 
     def predict(self, x, x_features=None):
