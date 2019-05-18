@@ -173,8 +173,8 @@ if __name__ == '__main__':
         overwrite = False
         print('Load %s_level data...' % level)
         x_train, y_train, y_train2, x_valid, y_valid, y_valid2, x_test, vocabulary, ids = \
-            get_data(train_file='./data/sent_train.txt', valid_file='./data/sent_dev.txt',
-                     test_file='./data/sent_test.txt', flag='train', is_multi=multi_flag)
+            get_data(train_file='./data/sent_train_multi.txt', valid_file='./data/sent_dev_multi.txt',
+                     test_file='./data/sent_test_multi.txt', flag='train', is_multi=multi_flag)
         # y_test_pred = cnn_base(x_train, y_train, x_valid, y_valid, x_test, level, overwrite=overwrite)
         y_test_pred = cnn_multi_base(x_train, y_train, y_train2, x_valid, y_valid, y_valid2, x_test, level, overwrite=overwrite)
         generate_result(ids, y_test_pred)
