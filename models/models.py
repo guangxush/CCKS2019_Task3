@@ -8,7 +8,7 @@ from keras.activations import softmax
 from keras import backend as K
 from keras.preprocessing.sequence import pad_sequences
 from keras.models import Model
-from models.callbacks import distance_metrics, categorical_metrics
+from models.callbacks import distance_metrics, categorical_metrics, categorical_metrics_multi
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 
 from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_score, accuracy_score
@@ -51,6 +51,27 @@ class Models(object):
     def init_callbacks(self):
 
         self.callbacks.append(categorical_metrics)
+        self.callbacks.append(
+            ModelCheckpoint(
+                filepath=os.path.join(self.config.checkpoint_dir, '%s.hdf5' % self.config.exp_name),
+                monitor=self.config.checkpoint_monitor,
+                mode=self.config.checkpoint_mode,
+                save_best_only=self.config.checkpoint_save_best_only,
+                save_weights_only=self.config.checkpoint_save_weights_only,
+                verbose=self.config.checkpoint_verbose,
+            )
+        )
+        self.callbacks.append(
+            EarlyStopping(
+                monitor=self.config.early_stopping_monitor,
+                patience=self.config.early_stopping_patience,
+                mode=self.config.early_stopping_mode
+            )
+        )
+
+    def init_callbacks_multi(self):
+
+        self.callbacks.append(categorical_metrics_multi)
         self.callbacks.append(
             ModelCheckpoint(
                 filepath=os.path.join(self.config.checkpoint_dir, '%s.hdf5' % self.config.exp_name),
@@ -383,7 +404,7 @@ class Models(object):
         if train_features is not None:
             train_features = np.asarray(train_features)
             valid_features = np.asarray(valid_features)
-            self.init_callbacks()
+            self.init_callbacks_multi()
             self.model.fit([x_train, train_features], y_train,
                            epochs=self.config.num_epochs,
                            verbose=self.config.verbose_training,
@@ -392,7 +413,7 @@ class Models(object):
                            callbacks=self.callbacks)
         else:
             # 初始化回调函数并用其训练
-            self.init_callbacks()
+            self.init_callbacks_multi()
             self.model.fit(x_train, y_train, y_train2,
                            epochs=self.config.num_epochs,
                            verbose=self.config.verbose_training,
