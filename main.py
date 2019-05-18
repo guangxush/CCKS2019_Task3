@@ -129,19 +129,19 @@ def cnn_multi_base(x_train, y_train, y_train2,  x_valid, y_valid, y_valid2, x_te
     # 获取词向量文件
     config.embedding_file += 'embeddings'
     # 载入配置文件
-    cnn_model = Models.Models(config)
+    model = Models.Models(config)
 
     # 模型训练
     print('Create the cnn multi model...')
-    cnn_model.cnn_multi()
+    model.cnn_multi()
     if overwrite or not os.path.exists(os.path.join(config.checkpoint_dir, '%s.hdf5' % model_name)):
         print('Start training the cnn multi model...')
-        cnn_model.fit_multi(x_train, y_train, y_train2, x_valid, y_valid, y_valid2)
-    cnn_model.load_weight()
+        model.fit_multi(x_train, y_train, y_train2, x_valid, y_valid, y_valid2)
+    model.load_weight()
     print('Start evaluate the cnn multi model...')
-    y_valid_pred = cnn_model.predict_multi(x_valid)
-    y_test_pred = cnn_model.predict_multi(x_test)
-    cnn_model.evaluate(model_name, y_valid_pred, y_valid)
+    y_valid_pred = model.predict_multi(x_valid)
+    y_test_pred = model.predict_multi(x_test)
+    model.evaluate(model_name, y_valid_pred, y_valid)
     print('Start generate the cnn multi model...')
 
     return y_test_pred
