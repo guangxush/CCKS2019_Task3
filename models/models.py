@@ -271,8 +271,7 @@ class Models(object):
         embedding_layer = Embedding(input_dim=weights.shape[0],
                                     output_dim=weights.shape[-1],
                                     weights=[weights], name='embedding_layer', trainable=True)
-        sent_embedding = SpatialDropout1D(0.2)(embedding_layer)
-
+        sent_embedding = embedding_layer(sentence)
         filter_length = [2, 3, 4, 5]
         conv_layer = Conv1D(filters=100, kernel_size=filter_length, padding='valid', strides=1, activation='relu')
         sent_c = conv_layer(sent_embedding)
@@ -293,7 +292,8 @@ class Models(object):
         embedding_layer = Embedding(input_dim=weights.shape[0],
                                     output_dim=weights.shape[-1],
                                     weights=[weights], name='embedding_layer', trainable=True)
-        sent_embedding = SpatialDropout1D(0.2)(embedding_layer)
+        sent_embedding = embedding_layer(sentence)
+        sent_embedding = SpatialDropout1D(0.2)(sent_embedding)
         bilstm_layer = Bidirectional(LSTM(128))(sent_embedding)
 
         sent = Dropout(0.5)(bilstm_layer)
