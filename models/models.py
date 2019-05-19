@@ -384,7 +384,7 @@ class Models(object):
                                     output_dim=weights.shape[-1],
                                     weights=[weights], name='embedding_layer', trainable=True)
         sent_embedding = embedding_layer(sentence)
-        all_input = np.concatenate((sent_embedding, dis1, dis2), axis=2)
+        all_input = K.concatenate([sent_embedding, dis1, dis2], axis=1)
         filter_length = 3
         conv_layer = Conv1D(filters=100, kernel_size=filter_length, padding='valid', strides=1, activation='relu')
         sent_c = conv_layer(all_input)
