@@ -127,7 +127,7 @@ class CategoricalMetricsMulti(Callback):
 
 class CategoricalFeatureMetricsDis(Callback):
     def __init__(self):
-        super(CategoricalFeatureMetrics, self).__init__()
+        super(CategoricalFeatureMetricsDis, self).__init__()
 
     def on_train_begin(self, logs={}):
         self.val_f1s = []
