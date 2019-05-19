@@ -137,7 +137,7 @@ class CategoricalMetricsMultiDis(Callback):
         self.val_acc = []
 
     def on_epoch_end(self, epoch, logs={}):
-        valid_results = self.model.predict([self.validation_data[0], self.validation_data[1], self.validation_data[2]])
+        valid_results = self.model.predict([self.validation_data[0], self.validation_data[1], self.validation_data[2]])[0]
         valid_y_pred = np.argmax(valid_results, axis=1)
         valid_y_pred.astype(int)
         valid_y = self.validation_data[3]
