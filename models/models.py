@@ -353,6 +353,36 @@ class Models(object):
                            loss_weights={'output': 1., 'output2': 1.},
                            metrics={'output': ['acc'], 'output2': ['acc']})
 
+    # 多任务模型加入距离信息
+    def cnn_multi_dis(self):
+        sentence = Input(shape=(self.config.max_len,), dtype='int32', name='sent_base')
+        dis1 = Input(shape=(self.config.max_len,), dtype='int32', name='disinfos1')
+        dis2 = Input(shape=(self.config.max_len,), dtype='int32', name='disinfos2')
+        weights = np.load(os.path.join(self.config.embedding_path, self.config.embedding_file))
+        embedding_layer = Embedding(input_dim=weights.shape[0],
+                                    output_dim=weights.shape[-1],
+                                    weights=[weights], name='embedding_layer', trainable=True)
+        sent_embedding = embedding_layer(sentence)
+        all_input = np.concatenate((sent_embedding, dis1, dis2), axis=1)
+        filter_length = 3
+        conv_layer = Conv1D(filters=100, kernel_size=filter_length, padding='valid', strides=1, activation='relu')
+        sent_c = conv_layer(all_input)
+        sent_maxpooling = MaxPooling1D(pool_size=self.config.max_len - filter_length + 1)(sent_c)
+        sent_conv = Flatten()(sent_maxpooling)
+        sent_conv = Activation('relu')(sent_conv)
+        sent = Dropout(0.5)(sent_conv)
+        # 多任务输出
+        output = Dense(self.config.classes, activation='softmax', name='output')(sent)
+        output2 = Dense(self.config.classes_multi, activation='softmax', name='output2')(sent)
+
+        inputs = [sentence, dis1, dis2]
+        outputs = [output, output2]
+        self.model = Model(inputs=inputs, outputs=outputs)
+        self.model.compile(loss={'output': 'categorical_crossentropy', 'output2': 'categorical_crossentropy'},
+                           optimizer=self.config.optimizer,
+                           loss_weights={'output': 1., 'output2': 1.},
+                           metrics={'output': ['acc'], 'output2': ['acc']})
+
     def pad(self, x_data):
         return pad_sequences(x_data, maxlen=self.config.max_len, padding='post', truncating='post')
 
@@ -400,26 +430,42 @@ class Models(object):
         y_valid = to_categorical(y_valid)
         y_valid2 = to_categorical(y_valid2)
 
-        self.callbacks = []
-        if train_features is not None:
-            train_features = np.asarray(train_features)
-            valid_features = np.asarray(valid_features)
-            self.init_callbacks_multi()
-            self.model.fit([x_train, train_features], y_train,
-                           epochs=self.config.num_epochs,
-                           verbose=self.config.verbose_training,
-                           batch_size=self.config.batch_size,
-                           validation_data=([x_valid, valid_features], y_valid),
-                           callbacks=self.callbacks)
-        else:
-            # 初始化回调函数并用其训练
-            self.init_callbacks_multi()
-            self.model.fit(x_train, [y_train, y_train2],
-                           epochs=self.config.num_epochs,
-                           verbose=self.config.verbose_training,
-                           batch_size=self.config.batch_size,
-                           validation_data=(x_valid, [y_valid, y_valid2]),
-                           callbacks=self.callbacks)
+        # 初始化回调函数并用其训练
+        self.init_callbacks_multi()
+        self.model.fit(x_train, [y_train, y_train2],
+                       epochs=self.config.num_epochs,
+                       verbose=self.config.verbose_training,
+                       batch_size=self.config.batch_size,
+                       validation_data=(x_valid, [y_valid, y_valid2]),
+                       callbacks=self.callbacks)
+
+    def fit_multi_dis(self, x_train, x_train_dis1, x_train_dis2, y_train, y_train2, x_valid, x_valid_dis1, x_valid_dis2, y_valid, y_valid2):
+        x_train = self.pad(x_train)
+        x_train_dis1 = self.pad(x_train_dis1)
+        x_train_dis1 = x_train_dis1.reshape(len(x_train_dis1), 1)
+        x_train_dis2 = self.pad(x_train_dis2)
+        x_train_dis2 = x_train_dis2.reshape(len(x_train_dis2), 1)
+
+        x_valid = self.pad(x_valid)
+        x_valid_dis1 = self.pad(x_valid_dis1)
+        x_valid_dis1 = x_train_dis1.reshape(len(x_valid_dis1), 1)
+        x_valid_dis2 = self.pad(x_valid_dis2)
+        x_valid_dis2 = x_train_dis1.reshape(len(x_valid_dis2), 1)
+
+        # 结果集one-hot，不能直接使用数字作为标签
+        y_train = to_categorical(y_train)
+        y_train2 = to_categorical(y_train2)
+        y_valid = to_categorical(y_valid)
+        y_valid2 = to_categorical(y_valid2)
+
+        # 初始化回调函数并用其训练
+        self.init_callbacks_multi()
+        self.model.fit([x_train, x_train_dis1, x_train_dis2], [y_train, y_train2],
+                       epochs=self.config.num_epochs,
+                       verbose=self.config.verbose_training,
+                       batch_size=self.config.batch_size,
+                       validation_data=([x_valid, x_valid_dis1, x_valid_dis2], [y_valid, y_valid2]),
+                       callbacks=self.callbacks)
 
     def predict(self, x, x_features=None):
         x = self.pad(x)
@@ -435,6 +481,16 @@ class Models(object):
             y_pred = self.model.predict([x, x_features], batch_size=100, verbose=1)[0]
         else:
             y_pred = self.model.predict(x, batch_size=100, verbose=1)[0]
+        return y_pred
+
+    def predict_multi_dis(self, x, x_dis1, x_dis2):
+        x = self.pad(x)
+        x_dis1 = self.pad(x_dis1)
+        x_dis1 = x_dis1.reshape(len(x_dis1), 1)
+
+        x_dis2 = self.pad(x_dis2)
+        x_dis2 = x_dis2.reshape(len(x_dis2), 1)
+        y_pred = self.model.predict([x, x_dis1, x_dis2], batch_size=100, verbose=1)[0]
         return y_pred
 
     def evaluate(self, model_name, y_pred, y_true):

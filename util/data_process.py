@@ -13,6 +13,7 @@ import logging
 import json
 from tqdm import tqdm
 import nltk
+import Levenshtein
 
 random.seed(42)
 
@@ -454,6 +455,101 @@ def load_data_multi(raw_file, level):
         return ids, x, vocabulary
 
 
+# 根据不同的文件类型加载数据
+def load_data_multi_dis(raw_file, level):
+    # 字符级别的训练集和验证集
+    if level == 'word':
+        with open('data/word_level/vocabulary_all.pkl', 'rb') as f_vocabulary:
+            vocabulary = pickle.load(f_vocabulary)
+        print('vocab_len_word:', len(vocabulary))
+        x = list()  # 句子输入
+        disinfos1 = list()  # 人物1距离坐标输入
+        disinfos2 = list()  # 人物2距离坐标输入
+        y = list()  # 预测标签的输出
+        y2 = list()  # 二级标签的输出
+        max_len = 0
+        with codecs.open(raw_file, encoding='utf-8') as f_train:
+            lines = f_train.readlines()
+            print(lines[0])
+            for line in tqdm(lines):
+                json_data = json.loads(line)
+                input = json_data['sent']
+                label = json_data['label']
+                label2 = json_data['label2']
+                # 31 4这种标签单独处理
+                if len(label.split(' ')) > 1:
+                    label = label.split(' ')[0]
+
+                # 单词中加入人物关系坐标
+                per1 = json_data['per1']
+                per2 = json_data['per2']
+                words = nltk.word_tokenize(input)
+                disinfo1 = load_distance(words, per1)
+                disinfo2 = load_distance(words, per2)
+
+                x.append([vocabulary.get(word, len(vocabulary) + 1) for word in words if word not in stopwords])
+                y.append(float(label))
+                y2.append(float(label2))
+                disinfos1.append(disinfo1)
+                disinfos2.append(disinfo2)
+
+                if len(x[-1]) > max_len:
+                    max_len = len(x[-1])
+        print('max_word_len', max_len)
+        avg_len = 0
+        max_len = 0
+        for word, id in vocabulary.items():
+            if len(word) > max_len:
+                max_len = len(word)
+            avg_len += len(word)
+        print('word_max_len:', max_len)
+        print('word_avg_len:', float(avg_len)/len(vocabulary))
+        return x, disinfos1, disinfos2, y, y2, vocabulary
+
+    # 测试集数据加载
+    elif level == 'test':
+        with open('data/word_level/vocabulary_all.pkl', 'rb') as f_vocabulary:
+            vocabulary = pickle.load(f_vocabulary)
+        print('vocab_len_word:', len(vocabulary))
+        x = list()  # 句子输入
+        disinfos1 = list()  # 人物1距离坐标输入
+        disinfos2 = list()  # 人物2距离坐标输入
+        ids = list()
+        max_len = 0
+        with codecs.open(raw_file, encoding='utf-8') as f_train:
+            lines = f_train.readlines()
+            print(lines[0])
+            for line in tqdm(lines):
+                json_data = json.loads(line)
+                input = json_data['sent']
+                test_id = json_data['id'].strip('\"')
+                ids.append(test_id)
+                words = nltk.word_tokenize(input)
+                x.append([vocabulary.get(word, len(vocabulary) + 1) for word in words if word not in stopwords])
+
+                # 单词中加入人物关系坐标
+                per1 = json_data['per1']
+                per2 = json_data['per2']
+                words = nltk.word_tokenize(input)
+                disinfo1 = load_distance(words, per1)
+                disinfo2 = load_distance(words, per2)
+                disinfos1.append(disinfo1)
+                disinfos2.append(disinfo2)
+
+                if len(x[-1]) > max_len:
+                    max_len = len(x[-1])
+        print('max_word_len', max_len)
+        avg_len = 0
+        max_len = 0
+        for word, id in vocabulary.items():
+            if len(word) > max_len:
+                max_len = len(word)
+            avg_len += len(word)
+        print('char_max_len:', max_len)
+        print('char_avg_len:', float(avg_len) / len(vocabulary))
+        return ids, x, disinfos1, disinfos2, vocabulary
+
+
 def load_sentence(x, y):
     with open('data/word_level/vocabulary_all.pkl', 'rb') as f_vocabulary:
         vocabulary = pickle.load(f_vocabulary)
@@ -462,6 +558,28 @@ def load_sentence(x, y):
     x_ = [vocabulary.get(word, len(vocabulary) + 1) for word in words_a if word not in stopwords]
     y_ = [vocabulary.get(word, len(vocabulary) + 1) for word in words_b if word not in stopwords]
     return x_, y_
+
+
+# 加入编辑距离
+def load_levenshtein_distance(words, per):
+    disinfo = []
+    for word in words:
+        if word not in stopwords:
+            disinfo.append(Levenshtein.distance(word, per))
+    return disinfo
+
+
+# 加入坐标距离
+def load_distance(words, per):
+    disinfo = np.arange(len(words))
+    per_position = 0
+    for word in words:
+        if per == word:
+            break
+        else:
+            per_position += 1
+    position = np.array(per_position * len(word))
+    return disinfo - position
 
 
 if __name__ == '__main__':
