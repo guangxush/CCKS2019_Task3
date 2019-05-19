@@ -363,8 +363,8 @@ class Models(object):
                                     output_dim=weights.shape[-1],
                                     weights=[weights], name='embedding_layer', trainable=True)
         sent_embedding = embedding_layer(sentence)
-        dis1 = dis1.reshape(len(dis1), 1)
-        dis2 = dis2.reshape(len(dis2), 1)
+        dis1 = dis1.reshape(1, len(dis1))
+        dis2 = dis2.reshape(1, len(dis2))
         all_input = np.concatenate((sent_embedding, dis1, dis2), axis=1)
         filter_length = 3
         conv_layer = Conv1D(filters=100, kernel_size=filter_length, padding='valid', strides=1, activation='relu')
