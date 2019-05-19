@@ -195,6 +195,45 @@ def cnn_multi_dis(x_train, x_train_dis1, x_train_dis2, y_train, y_train2, x_vali
     return y_test_pred
 
 
+# 创建模型
+def bilstm_multi_dis(x_train, x_train_dis1, x_train_dis2, y_train, y_train2, x_valid, x_valid_dis1, x_valid_dis2, y_valid, y_valid2, x_test, x_test_dis1, x_test_dis2, level, overwrite=False):
+    config = Config()
+    config.level = level
+    model_name = 'bilstm_multi_dis'
+    if level == 'word':
+        # 固定最大长度，多余的截取掉，不足的用0填充
+        config.max_len = config.max_len_word
+        config.vocab_len = config.vocab_len_word
+    else:
+        config.max_len = config.max_len_char
+        config.vocab_len = config.vocab_len_char
+    config.exp_name = 'bilstm_multi_dis_' + level
+
+    # 训练的模型保存成文件的形式
+    if not os.path.exists(config.checkpoint_dir):
+        os.makedirs(config.checkpoint_dir)
+
+    # 获取词向量文件
+    config.embedding_file += 'embeddings'
+    # 载入配置文件
+    model = Models.Models(config)
+
+    # 模型训练
+    print('Create the bilstm multi dis model...')
+    model.bilstm_multi_dis()
+    if overwrite or not os.path.exists(os.path.join(config.checkpoint_dir, '%s.hdf5' % model_name)):
+        print('Start training the bilstm multi dis model...')
+        model.fit_multi_dis(x_train, x_train_dis1, x_train_dis2, y_train, y_train2, x_valid, x_valid_dis1, x_valid_dis2, y_valid, y_valid2)
+    model.load_weight()
+    print('Start evaluate the bilstm multi dis model...')
+    y_valid_pred = model.predict_multi_dis(x_valid, x_valid_dis1, x_valid_dis2)
+    y_test_pred = model.predict_multi_dis(x_test, x_test_dis1, x_test_dis2)
+    model.evaluate(model_name, y_valid_pred, y_valid)
+    print('Start generate the bilstm multi dis model...')
+
+    return y_test_pred
+
+
 # 生成预测结果
 def generate_result(ids, y_test_pred):
     config = Config()
@@ -222,7 +261,8 @@ if __name__ == '__main__':
         get_data(train_file='./data/sent_train_multi.txt', valid_file='./data/sent_dev_multi.txt',
                  test_file='./data/sent_test_multi.txt', flag='train', is_multi=multi_flag, is_per_dis=True)
     # y_test_pred = cnn_base(x_train, y_train, x_valid, y_valid, x_test, level, overwrite=overwrite)
-    y_test_pred = cnn_multi_dis(x_train, x_train_dis1, x_train_dis2, y_train, y_train2, x_valid, x_valid_dis1, x_valid_dis2, y_valid, y_valid2, x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
+    # y_test_pred = cnn_multi_dis(x_train, x_train_dis1, x_train_dis2, y_train, y_train2, x_valid, x_valid_dis1, x_valid_dis2, y_valid, y_valid2, x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
+    y_test_pred = bilstm_multi_dis(x_train, x_train_dis1, x_train_dis2, y_train, y_train2, x_valid, x_valid_dis1, x_valid_dis2, y_valid, y_valid2, x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
     generate_result(ids, y_test_pred)
 
     # 多任务方法

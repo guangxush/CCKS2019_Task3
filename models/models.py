@@ -404,6 +404,32 @@ class Models(object):
                            loss_weights={'output': 1., 'output2': 1.},
                            metrics={'output': ['acc'], 'output2': ['acc']})
 
+    # 多任务模型加入距离信息
+    def bilstm_multi_dis(self):
+        sentence = Input(shape=(self.config.max_len,), dtype='int32', name='sent_base')
+        dis1 = Input(shape=(self.config.max_len, 1), dtype='float32', name='disinfos1')
+        dis2 = Input(shape=(self.config.max_len, 1), dtype='float32', name='disinfos2')
+        weights = np.load(os.path.join(self.config.embedding_path, self.config.embedding_file))
+        embedding_layer = Embedding(input_dim=weights.shape[0],
+                                    output_dim=weights.shape[-1],
+                                    weights=[weights], name='embedding_layer', trainable=True)
+
+        sent_embedding = embedding_layer(sentence)
+        all_input = concatenate([sent_embedding, dis1, dis2], axis=2)
+        bilstm_layer = Bidirectional(LSTM(128))(all_input)
+        sent = Dropout(0.5)(bilstm_layer)
+        # 多任务输出
+        output = Dense(self.config.classes, activation='softmax', name='output')(sent)
+        output2 = Dense(self.config.classes_multi, activation='softmax', name='output2')(sent)
+
+        inputs = [sentence, dis1, dis2]
+        outputs = [output, output2]
+        self.model = Model(inputs=inputs, outputs=outputs)
+        self.model.compile(loss={'output': 'categorical_crossentropy', 'output2': 'categorical_crossentropy'},
+                           optimizer=self.config.optimizer,
+                           loss_weights={'output': 1., 'output2': 1.},
+                           metrics={'output': ['acc'], 'output2': ['acc']})
+
     def pad(self, x_data):
         return pad_sequences(x_data, maxlen=self.config.max_len, padding='post', truncating='post')
 
