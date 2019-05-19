@@ -514,10 +514,10 @@ class Models(object):
     def predict_multi_dis(self, x, x_dis1, x_dis2):
         x = self.pad(x)
         x_dis1 = self.pad(x_dis1)
-        x_dis1 = x_dis1.reshape(len(x_dis1), 1)
+        x_dis1 = x_dis1.reshape(len(x_dis1), self.config.max_len, 1)
 
         x_dis2 = self.pad(x_dis2)
-        x_dis2 = x_dis2.reshape(len(x_dis2), 1)
+        x_dis2 = x_dis2.reshape(len(x_dis2), self.config.max_len, 1)
         y_pred = self.model.predict([x, x_dis1, x_dis2], batch_size=100, verbose=1)[0]
         return y_pred
 
