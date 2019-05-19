@@ -363,7 +363,7 @@ class Models(object):
                                     output_dim=weights.shape[-1],
                                     weights=[weights], name='embedding_layer', trainable=True)
         sent_embedding = embedding_layer(sentence)
-        all_input = np.concatenate((sent_embedding, dis1, dis2), axis=1)
+        all_input = np.concatenate((sent_embedding, dis1, dis2), axis=2)
         filter_length = 3
         conv_layer = Conv1D(filters=100, kernel_size=filter_length, padding='valid', strides=1, activation='relu')
         sent_c = conv_layer(all_input)
@@ -441,16 +441,16 @@ class Models(object):
 
     def fit_multi_dis(self, x_train, x_train_dis1, x_train_dis2, y_train, y_train2, x_valid, x_valid_dis1, x_valid_dis2, y_valid, y_valid2):
         x_train = self.pad(x_train)
+        x_train_dis1 = x_train_dis1.reshape(len(x_train_dis1), self.config.max_len, 1)
+        x_train_dis2 = x_train_dis2.reshape(len(x_train_dis2), self.config.max_len, 1)
         x_train_dis1 = self.pad(x_train_dis1)
-        x_train_dis1 = x_train_dis1.reshape(len(x_train_dis1), 1)
         x_train_dis2 = self.pad(x_train_dis2)
-        x_train_dis2 = x_train_dis2.reshape(len(x_train_dis2), 1)
 
         x_valid = self.pad(x_valid)
-        x_valid_dis1 = self.pad(x_valid_dis1)
         x_valid_dis1 = x_train_dis1.reshape(len(x_valid_dis1), 1)
-        x_valid_dis2 = self.pad(x_valid_dis2)
+        x_valid_dis1 = self.pad(x_valid_dis1)
         x_valid_dis2 = x_train_dis1.reshape(len(x_valid_dis2), 1)
+        x_valid_dis2 = self.pad(x_valid_dis2)
 
         # 结果集one-hot，不能直接使用数字作为标签
         y_train = to_categorical(y_train)
