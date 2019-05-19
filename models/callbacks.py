@@ -125,9 +125,9 @@ class CategoricalMetricsMulti(Callback):
         return roc_auc_score(truth, pred, average=average)
 
 
-class CategoricalFeatureMetricsDis(Callback):
+class CategoricalMetricsMultiDis(Callback):
     def __init__(self):
-        super(CategoricalFeatureMetricsDis, self).__init__()
+        super(CategoricalMetricsMultiDis, self).__init__()
 
     def on_train_begin(self, logs={}):
         self.val_f1s = []
@@ -137,7 +137,7 @@ class CategoricalFeatureMetricsDis(Callback):
         self.val_acc = []
 
     def on_epoch_end(self, epoch, logs={}):
-        valid_results = self.model.predict([self.validation_data[0], self.validation_data[1], self.validation_data[2]])[0]
+        valid_results = self.model.predict([self.validation_data[0], self.validation_data[1], self.validation_data[2]])
         valid_y_pred = np.argmax(valid_results, axis=1)
         valid_y_pred.astype(int)
         valid_y = self.validation_data[3]
@@ -255,5 +255,5 @@ categorical_metrics = CategoricalMetrics()
 
 categorical_metrics_multi = CategoricalMetricsMulti()
 
-categorical_metrics_multi_dis = CategoricalFeatureMetricsDis()
+categorical_metrics_multi_dis = CategoricalMetricsMultiDis()
 
