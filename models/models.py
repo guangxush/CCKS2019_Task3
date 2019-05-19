@@ -486,6 +486,7 @@ class Models(object):
         y_valid2 = to_categorical(y_valid2)
 
         # 初始化回调函数并用其训练
+        self.callbacks = []
         self.init_callbacks_multi_dis()
         self.model.fit([x_train, x_train_dis1, x_train_dis2], [y_train, y_train2],
                        epochs=self.config.num_epochs,
