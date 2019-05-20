@@ -91,7 +91,7 @@ class Models(object):
         )
 
     def init_callbacks_multi_dis(self):
-
+        self.config.exp_name = 'bilstm_multi_dis_' + self.config.level
         self.callbacks.append(categorical_metrics_multi_dis)
         self.callbacks.append(
             ModelCheckpoint(
