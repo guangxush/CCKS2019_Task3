@@ -311,9 +311,10 @@ class Models(object):
     def cnn_base(self):
         sentence = Input(shape=(self.config.max_len,), dtype='int32', name='sent_base')
         weights = np.load(os.path.join(self.config.embedding_path, self.config.embedding_file))
+        # trainable修改为False
         embedding_layer = Embedding(input_dim=weights.shape[0],
                                     output_dim=weights.shape[-1],
-                                    weights=[weights], name='embedding_layer', trainable=True)
+                                    weights=[weights], name='embedding_layer', trainable=False)
         sent_embedding = embedding_layer(sentence)
         filter_length = 3
         conv_layer = Conv1D(filters=100, kernel_size=filter_length, padding='valid', strides=1, activation='relu')
@@ -410,9 +411,10 @@ class Models(object):
         dis1 = Input(shape=(self.config.max_len, 1), dtype='float32', name='disinfos1')
         dis2 = Input(shape=(self.config.max_len, 1), dtype='float32', name='disinfos2')
         weights = np.load(os.path.join(self.config.embedding_path, self.config.embedding_file))
+        # trainable修改为False
         embedding_layer = Embedding(input_dim=weights.shape[0],
                                     output_dim=weights.shape[-1],
-                                    weights=[weights], name='embedding_layer', trainable=True)
+                                    weights=[weights], name='embedding_layer', trainable=False)
 
         sent_embedding = embedding_layer(sentence)
         all_input = concatenate([sent_embedding, dis1, dis2], axis=2)
