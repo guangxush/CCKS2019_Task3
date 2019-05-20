@@ -450,13 +450,13 @@ class Models(object):
         self.callbacks = []
         if train_features is not None:
             train_features = np.asarray(train_features)
-            valid_features = np.asarray(valid_features)
             self.init_callbacks()
             self.model.fit([x_train, train_features], y_train,
                            epochs=self.config.num_epochs,
                            verbose=self.config.verbose_training,
                            batch_size=self.config.batch_size,
-                           validation_data=([x_valid, valid_features], y_valid),
+                           # 这里随机分出一部分数据作为验证集
+                           validation_split=0.3,
                            callbacks=self.callbacks)
         else:
             # 初始化回调函数并用其训练
@@ -488,7 +488,7 @@ class Models(object):
                        validation_data=(x_valid, [y_valid, y_valid2]),
                        callbacks=self.callbacks)
 
-    def fit_multi_dis(self, x_train, x_train_dis1, x_train_dis2, y_train, y_train2, x_valid, x_valid_dis1, x_valid_dis2, y_valid, y_valid2):
+    def fit_multi_dis(self, x_train, x_train_dis1, x_train_dis2, y_train, y_train2):
         x_train = self.pad(x_train)
         x_train_dis1 = np.array(x_train_dis1)
         x_train_dis2 = np.array(x_train_dis2)
@@ -498,20 +498,9 @@ class Models(object):
         x_train_dis1 = x_train_dis1.reshape(len(x_train_dis1), self.config.max_len, 1)
         x_train_dis2 = x_train_dis2.reshape(len(x_train_dis2), self.config.max_len, 1)
 
-        x_valid = self.pad(x_valid)
-        x_valid_dis1 = np.array(x_valid_dis1)
-        x_valid_dis2 = np.array(x_valid_dis2)
-
-        x_valid_dis1 = self.pad(x_valid_dis1)
-        x_valid_dis2 = self.pad(x_valid_dis2)
-        x_valid_dis1 = x_valid_dis1.reshape(len(x_valid_dis1), self.config.max_len, 1)
-        x_valid_dis2 = x_valid_dis2.reshape(len(x_valid_dis2), self.config.max_len, 1)
-
         # 结果集one-hot，不能直接使用数字作为标签
         y_train = to_categorical(y_train)
         y_train2 = to_categorical(y_train2)
-        y_valid = to_categorical(y_valid)
-        y_valid2 = to_categorical(y_valid2)
 
         # 初始化回调函数并用其训练
         self.callbacks = []
@@ -520,7 +509,8 @@ class Models(object):
                        epochs=self.config.num_epochs,
                        verbose=self.config.verbose_training,
                        batch_size=self.config.batch_size,
-                       validation_data=([x_valid, x_valid_dis1, x_valid_dis2], [y_valid, y_valid2]),
+                       # 这里随机分出一部分数据作为验证集
+                       validation_split=0.3,
                        callbacks=self.callbacks)
 
     def predict(self, x, x_features=None):

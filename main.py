@@ -184,7 +184,7 @@ def cnn_multi_dis(x_train, x_train_dis1, x_train_dis2, y_train, y_train2, x_vali
     model.cnn_multi_dis()
     if overwrite or not os.path.exists(os.path.join(config.checkpoint_dir, '%s.hdf5' % model_name)):
         print('Start training the cnn multi dis model...')
-        model.fit_multi_dis(x_train, x_train_dis1, x_train_dis2, y_train, y_train2, x_valid, x_valid_dis1, x_valid_dis2, y_valid, y_valid2)
+        model.fit_multi_dis(x_train, x_train_dis1, x_train_dis2, y_train, y_train2)
     model.load_weight()
     print('Start evaluate the cnn multi dis model...')
     y_valid_pred = model.predict_multi_dis(x_valid, x_valid_dis1, x_valid_dis2)
@@ -223,7 +223,7 @@ def bilstm_multi_dis(x_train, x_train_dis1, x_train_dis2, y_train, y_train2, x_v
     model.bilstm_multi_dis()
     if overwrite or not os.path.exists(os.path.join(config.checkpoint_dir, '%s.hdf5' % model_name)):
         print('Start training the bilstm multi dis model...')
-        model.fit_multi_dis(x_train, x_train_dis1, x_train_dis2, y_train, y_train2, x_valid, x_valid_dis1, x_valid_dis2, y_valid, y_valid2)
+        model.fit_multi_dis(x_train, x_train_dis1, x_train_dis2, y_train, y_train2)
     model.load_weight()
     print('Start evaluate the bilstm multi dis model...')
     y_valid_pred = model.predict_multi_dis(x_valid, x_valid_dis1, x_valid_dis2)
