@@ -506,8 +506,8 @@ class Models(object):
 
         x_train_dis1 = self.pad(x_train_dis1)
         x_train_dis2 = self.pad(x_train_dis2)
-        x_train_dis1 = x_train_dis1.reshape(len(x_train_dis1), self.config.max_len, 1)
-        x_train_dis2 = x_train_dis2.reshape(len(x_train_dis2), self.config.max_len, 1)
+        # x_train_dis1 = x_train_dis1.reshape(len(x_train_dis1), self.config.max_len, 1)
+        # x_train_dis2 = x_train_dis2.reshape(len(x_train_dis2), self.config.max_len, 1)
 
         # 结果集one-hot，不能直接使用数字作为标签
         y_train = to_categorical(y_train)
@@ -519,8 +519,8 @@ class Models(object):
 
         x_valid_dis1 = self.pad(x_valid_dis1)
         x_valid_dis2 = self.pad(x_valid_dis2)
-        x_valid_dis1 = x_valid_dis1.reshape(len(x_valid_dis1), self.config.max_len, 1)
-        x_valid_dis2 = x_valid_dis2.reshape(len(x_valid_dis2), self.config.max_len, 1)
+        # x_valid_dis1 = x_valid_dis1.reshape(len(x_valid_dis1), self.config.max_len, 1)
+        # x_valid_dis2 = x_valid_dis2.reshape(len(x_valid_dis2), self.config.max_len, 1)
 
         # 结果集one-hot，不能直接使用数字作为标签
         y_valid = to_categorical(y_valid)
