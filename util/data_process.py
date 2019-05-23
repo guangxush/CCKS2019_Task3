@@ -14,7 +14,7 @@ import json
 from tqdm import tqdm
 import nltk
 import Levenshtein
-
+from config import Config
 random.seed(42)
 
 stopwords = [u'', u' ', '\t', '.', '=']
@@ -490,6 +490,7 @@ def load_data_multi_dis(raw_file, level):
                 x.append([vocabulary.get(word, len(vocabulary) + 1) for word in words if word not in stopwords])
                 y.append(float(label))
                 y2.append(float(label2))
+                # index -> vector
                 disinfos1.append(disinfo1)
                 disinfos2.append(disinfo2)
 
@@ -571,6 +572,7 @@ def load_levenshtein_distance(words, per):
 
 # 加入坐标距离
 def load_distance(words, per):
+    config = Config()
     disinfo = np.arange(len(words))
     per_position = 0
     for word in words:
@@ -578,9 +580,10 @@ def load_distance(words, per):
             break
         else:
             per_position += 1
+    # disinfo = disinfo - per_position
     position = np.array(per_position * len(word))
     # 60+60， 0-120
-    return disinfo - position
+    return disinfo - position + config.max_len_word
 
 
 if __name__ == '__main__':

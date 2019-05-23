@@ -24,7 +24,7 @@ class Config(object):
         self.early_stopping_monitor = 'val_f1'
         self.early_stopping_patience = 5
         self.early_stopping_mode = 'max'
-        self.max_len_word = 73
+        self.max_len_word = 60
         self.max_len_char = 300
         self.vocab_len_word = 29628
         self.vocab_len_char = 88

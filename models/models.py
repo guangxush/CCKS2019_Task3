@@ -416,8 +416,18 @@ class Models(object):
                                     output_dim=weights.shape[-1],
                                     weights=[weights], name='embedding_layer', trainable=False)
 
+        embedding_dis1_layer = Embedding(input_dim=dis1.shape[0],
+                                         output_dim=5,
+                                         weights=[weights], name='embedding_dis1_layer', trainable=True)
+
+        embedding_dis2_layer = Embedding(input_dim=dis2.shape[0],
+                                         output_dim=5,
+                                         weights=[weights], name='embedding_dis2_layer', trainable=True)
+
         sent_embedding = embedding_layer(sentence)
-        all_input = concatenate([sent_embedding, dis1, dis2], axis=2)
+        dis1_embedding = embedding_dis1_layer(dis1)
+        dis2_emdedding = embedding_dis2_layer(dis2)
+        all_input = concatenate([sent_embedding, dis1_embedding, dis2_emdedding], axis=2)
         bilstm_layer = Bidirectional(LSTM(128))(all_input)
         sent = Dropout(0.5)(bilstm_layer)
         # 多任务输出
@@ -489,7 +499,7 @@ class Models(object):
                        validation_data=(x_valid, [y_valid, y_valid2]),
                        callbacks=self.callbacks)
 
-    def fit_multi_dis(self, x_train, x_train_dis1, x_train_dis2, y_train, y_train2):
+    def fit_multi_dis(self, x_train, x_train_dis1, x_train_dis2, y_train, y_train2, x_valid, x_valid_dis1, x_valid_dis2, y_valid, y_valid2):
         x_train = self.pad(x_train)
         x_train_dis1 = np.array(x_train_dis1)
         x_train_dis2 = np.array(x_train_dis2)
@@ -503,6 +513,19 @@ class Models(object):
         y_train = to_categorical(y_train)
         y_train2 = to_categorical(y_train2)
 
+        x_valid = self.pad(x_valid)
+        x_valid_dis1 = np.array(x_valid_dis1)
+        x_valid_dis2 = np.array(x_valid_dis2)
+
+        x_valid_dis1 = self.pad(x_valid_dis1)
+        x_valid_dis2 = self.pad(x_valid_dis2)
+        x_valid_dis1 = x_valid_dis1.reshape(len(x_valid_dis1), self.config.max_len, 1)
+        x_valid_dis2 = x_valid_dis2.reshape(len(x_valid_dis2), self.config.max_len, 1)
+
+        # 结果集one-hot，不能直接使用数字作为标签
+        y_valid = to_categorical(y_valid)
+        y_valid2 = to_categorical(y_valid2)
+
         # 初始化回调函数并用其训练
         self.callbacks = []
         self.init_callbacks_multi_dis()
@@ -511,8 +534,10 @@ class Models(object):
                        verbose=self.config.verbose_training,
                        batch_size=self.config.batch_size,
                        # 这里随机分出一部分数据作为验证集
-                       validation_split=0.3,
-                       callbacks=self.callbacks)
+                       # validation_split=0.3,
+                       validation_data=([x_valid, x_valid_dis1, x_valid_dis2], [y_valid, y_valid2]),
+                       callbacks=self.callbacks,
+                       class_weight='balanced')
 
     def predict(self, x, x_features=None):
         x = self.pad(x)
