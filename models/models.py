@@ -538,7 +538,7 @@ class Models(object):
                        validation_data=([x_valid, x_valid_dis1, x_valid_dis2], [y_valid, y_valid2]),
                        callbacks=self.callbacks,
                        # 平衡一下0数据的权重
-                       class_weight='balanced')
+                       class_weight=['balanced'])
 
     def predict(self, x, x_features=None):
         x = self.pad(x)
