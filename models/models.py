@@ -416,13 +416,13 @@ class Models(object):
                                     output_dim=weights.shape[-1],
                                     weights=[weights], name='embedding_layer', trainable=False)
 
-        embedding_dis1_layer = Embedding(input_dim=self.config.max_len,
+        embedding_dis1_layer = Embedding(input_dim=self.config.max_len*2,
                                          output_dim=5,
-                                         weights=[weights], name='embedding_dis1_layer', trainable=True)
+                                         name='embedding_dis1_layer', trainable=True)
 
-        embedding_dis2_layer = Embedding(input_dim=self.config.max_len,
+        embedding_dis2_layer = Embedding(input_dim=self.config.max_len*2,
                                          output_dim=5,
-                                         weights=[weights], name='embedding_dis2_layer', trainable=True)
+                                         name='embedding_dis2_layer', trainable=True)
 
         sent_embedding = embedding_layer(sentence)
         dis1_embedding = embedding_dis1_layer(dis1)
