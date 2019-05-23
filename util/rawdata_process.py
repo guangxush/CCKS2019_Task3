@@ -116,19 +116,21 @@ if __name__ == '__main__':
         sent_file = '../raw_data/open_data/sent_train.txt'
         label_file = '../raw_data/open_data/sent_relation_train.txt'
         out_file = '../data/sent_train_multi.txt'
-        generate_json_data_multi_remove(sent_file, label_file, out_file, flag='train')
+        generate_json_data_multi(sent_file, label_file, out_file, flag='train')
+        # 去掉部分数据效果不好
+        # generate_json_data_multi_remove(sent_file, label_file, out_file, flag='train')
 
         # dev file
         sent_file = '../raw_data/open_data/sent_dev.txt'
         label_file = '../raw_data/open_data/sent_relation_dev.txt'
         out_file = '../data/sent_dev_multi.txt'
-        generate_json_data_multi_remove(sent_file, label_file, out_file, flag='dev')
+        generate_json_data_multi(sent_file, label_file, out_file, flag='dev')
 
         # test file
         sent_file = '../raw_data/open_data/sent_test.txt'
         label_file = '../raw_data/open_data/sent_relation_test.txt'
         out_file = '../data/sent_test_multi.txt'
-        generate_json_data_multi_remove(sent_file, label_file, out_file, flag='test')
+        generate_json_data_multi(sent_file, label_file, out_file, flag='test')
     # 普通方法
     else:
         # train file

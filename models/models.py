@@ -416,11 +416,11 @@ class Models(object):
                                     output_dim=weights.shape[-1],
                                     weights=[weights], name='embedding_layer', trainable=False)
 
-        embedding_dis1_layer = Embedding(input_dim=dis1.shape[0],
+        embedding_dis1_layer = Embedding(input_dim=self.config.max_len,
                                          output_dim=5,
                                          weights=[weights], name='embedding_dis1_layer', trainable=True)
 
-        embedding_dis2_layer = Embedding(input_dim=dis2.shape[0],
+        embedding_dis2_layer = Embedding(input_dim=self.config.max_len,
                                          output_dim=5,
                                          weights=[weights], name='embedding_dis2_layer', trainable=True)
 
@@ -537,6 +537,7 @@ class Models(object):
                        # validation_split=0.3,
                        validation_data=([x_valid, x_valid_dis1, x_valid_dis2], [y_valid, y_valid2]),
                        callbacks=self.callbacks,
+                       # 平衡一下0数据的权重
                        class_weight='balanced')
 
     def predict(self, x, x_features=None):
