@@ -3,6 +3,7 @@ from keras.callbacks import Callback
 from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_score, accuracy_score
 import numpy as np
 from sklearn.preprocessing import LabelBinarizer
+from keras.utils import to_categorical
 
 
 class CategoricalMetrics(Callback):
@@ -139,12 +140,13 @@ class CategoricalMetricsMultiDis(Callback):
     def on_epoch_end(self, epoch, logs={}):
         valid_results = self.model.predict([self.validation_data[0], self.validation_data[1], self.validation_data[2]])[0]
         valid_y_pred = np.argmax(valid_results, axis=1)
+        valid_one_hit = to_categorical(valid_y_pred, 35)
         valid_y_pred.astype(int)
         valid_y = self.validation_data[3]
         valid_y_true = np.argmax(valid_y, axis=1)
         valid_y_true.astype(int)
 
-        _val_f1 = self.new_f1(valid_results, valid_y)
+        _val_f1 = self.new_f1(valid_results, valid_one_hit)
         _val_recall = recall_score(valid_y_true, valid_y_pred, average='weighted')
         _val_precision = precision_score(valid_y_true, valid_y_pred, average='weighted')
         _val_accuracy = accuracy_score(valid_y_true, valid_y_pred)

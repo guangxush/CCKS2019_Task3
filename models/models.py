@@ -466,7 +466,8 @@ class Models(object):
                            verbose=self.config.verbose_training,
                            batch_size=self.config.batch_size,
                            validation_data=(x_valid, y_valid),
-                           callbacks=self.callbacks)
+                           callbacks=self.callbacks,
+                           class_weight='balanced')
 
     def fit_multi(self, x_train, y_train, y_train2, x_valid, y_valid, y_valid2, train_features=None,
                   valid_features=None):
