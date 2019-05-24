@@ -579,10 +579,12 @@ class Models(object):
     def evaluate(self, model_name, y_pred, y_true):
         score_path = self.config.score_path
         fw = codecs.open(score_path, 'a', encoding='utf-8')
+        y_pred_for_f1 = y_pred
+        y_true_for_f1 = to_categorical(y_true, 35)
         y_pred = [np.argmax(y) for y in y_pred]
         precision = precision_score(y_true, y_pred, average='micro')
         recall = recall_score(y_true, y_pred, average='micro')
-        f1 = f1_score(y_true, y_pred, average='micro')
+        f1 = f1_score(y_true_for_f1, y_pred_for_f1, average='micro')
         accuracy = accuracy_score(y_true, y_pred)
         auc = categorical_metrics.multiclass_roc_auc_score(y_true, y_pred, average="weighted")
         print('\n- **Evaluation results of %s model**' % model_name)
@@ -594,6 +596,19 @@ class Models(object):
         fw.write("|%s|%.4f|%.4f|%.4f|%.4f|%.4f|\n" % (model_name, precision, recall, f1, auc, accuracy))
         fw.close()
         return precision, recall, f1, auc, accuracy
+
+    # 根据比赛结果自定义的f1值
+    def new_f1(self, all_preds, all_labels):
+        n_r = int(np.sum(all_preds[:, 1:] * all_labels[:, 1:]))
+        n_std = int(np.sum(all_labels[:, 1:]))
+        n_sys = int(np.sum(all_preds[:, 1:]))
+        try:
+            precision = n_r / n_sys
+            recall = n_r / n_std
+            f1 = 2 * precision * recall / (precision + recall)
+        except ZeroDivisionError:
+            f1 = 0.0
+        return f1
 
 
 
