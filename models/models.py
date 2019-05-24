@@ -384,8 +384,18 @@ class Models(object):
         embedding_layer = Embedding(input_dim=weights.shape[0],
                                     output_dim=weights.shape[-1],
                                     weights=[weights], name='embedding_layer', trainable=True)
+        embedding_dis1_layer = Embedding(input_dim=self.config.max_len * 2,
+                                         output_dim=5,
+                                         name='embedding_dis1_layer', trainable=True)
+
+        embedding_dis2_layer = Embedding(input_dim=self.config.max_len * 2,
+                                         output_dim=5,
+                                         name='embedding_dis2_layer', trainable=True)
+
         sent_embedding = embedding_layer(sentence)
-        all_input = concatenate([sent_embedding, dis1, dis2], axis=2)
+        dis1_embedding = embedding_dis1_layer(dis1)
+        dis2_emdedding = embedding_dis2_layer(dis2)
+        all_input = concatenate([sent_embedding, dis1_embedding, dis2_emdedding], axis=2)
         filter_length = 3
         conv_layer = Conv1D(filters=100, kernel_size=filter_length, padding='valid', strides=1, activation='relu')
         sent_c = conv_layer(all_input)
