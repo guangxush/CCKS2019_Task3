@@ -378,8 +378,8 @@ class Models(object):
     # 多任务模型加入距离信息
     def cnn_multi_dis(self):
         sentence = Input(shape=(self.config.max_len,), dtype='int32', name='sent_base')
-        dis1 = Input(shape=(self.config.max_len, 1), dtype='float32', name='disinfos1')
-        dis2 = Input(shape=(self.config.max_len, 1), dtype='float32', name='disinfos2')
+        dis1 = Input(shape=(self.config.max_len, ), dtype='float32', name='disinfos1')
+        dis2 = Input(shape=(self.config.max_len, ), dtype='float32', name='disinfos2')
         weights = np.load(os.path.join(self.config.embedding_path, self.config.embedding_file))
         embedding_layer = Embedding(input_dim=weights.shape[0],
                                     output_dim=weights.shape[-1],
