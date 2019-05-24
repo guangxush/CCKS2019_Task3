@@ -584,7 +584,7 @@ class Models(object):
         y_pred = [np.argmax(y) for y in y_pred]
         precision = precision_score(y_true, y_pred, average='micro')
         recall = recall_score(y_true, y_pred, average='micro')
-        f1 = f1_score(y_true_for_f1, y_pred_for_f1, average='micro')
+        f1 = self.new_f1(y_true_for_f1, y_pred_for_f1)
         accuracy = accuracy_score(y_true, y_pred)
         auc = categorical_metrics.multiclass_roc_auc_score(y_true, y_pred, average="weighted")
         print('\n- **Evaluation results of %s model**' % model_name)
