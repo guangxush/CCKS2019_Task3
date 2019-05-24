@@ -397,7 +397,7 @@ class Models(object):
         dis2_emdedding = embedding_dis2_layer(dis2)
         all_input = concatenate([sent_embedding, dis1_embedding, dis2_emdedding], axis=2)
         filter_length = 3
-        conv_layer = Conv1D(filters=100, kernel_size=filter_length, padding='valid', strides=1, activation='relu')
+        conv_layer = Conv1D(filters=300, kernel_size=filter_length, padding='valid', strides=1, activation='relu')
         sent_c = conv_layer(all_input)
         sent_maxpooling = MaxPooling1D(pool_size=self.config.max_len - filter_length + 1)(sent_c)
         sent_conv = Flatten()(sent_maxpooling)
