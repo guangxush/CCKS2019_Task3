@@ -12,7 +12,7 @@ import random
 import logging
 import json
 from tqdm import tqdm
-import nltk
+# import nltk
 import Levenshtein
 from config import Config
 random.seed(42)
@@ -110,7 +110,7 @@ def build_word_level_corpus_all(train_file, valid_file, test_file):
             json_data = json.loads(line)
             sentences.append(json_data['sent'])
 
-    target_lines = [' '.join([w for w in nltk.word_tokenize(sentence) if w not in stopwords]).lower() + '\n' for sentence in sentences]
+    target_lines = [' '.join([w for w in sentence.split(' ') if w not in stopwords]).lower() + '\n' for sentence in sentences]
 
     with codecs.open('../data/word_level/raw_corpus_all.txt', 'w', encoding='utf-8') as f_corpus:
         f_corpus.writelines(target_lines)
@@ -154,19 +154,19 @@ def build_word_level_vocabulary_all(train_file, valid_file, test_file):
         for line in lines:
             json_data = json.loads(line)
             # 对句子进行分词
-            sentences.extend(nltk.word_tokenize(json_data['sent']))
+            sentences.extend(json_data['sent'].split(' '))
 
     with codecs.open(valid_file, encoding='utf-8') as f_valid:
         lines = f_valid.readlines()
         for line in lines:
             json_data = json.loads(line)
-            sentences.extend(nltk.word_tokenize(json_data['sent']))
+            sentences.extend(json_data['sent'].split(' '))
 
     with codecs.open(test_file, encoding='utf-8') as f_test:
         lines = f_test.readlines()
         for line in lines:
             json_data = json.loads(line)
-            sentences.extend(nltk.word_tokenize(json_data['sent']))
+            sentences.extend(json_data['sent'].split(' '))
 
     # 转换成集合，去掉重复词
     word_list = list(set(sentences))
@@ -280,7 +280,8 @@ def load_data(raw_file, level):
                 if len(label.split(' ')) > 1:
                     label = label.split(' ')[0]
 
-                words = nltk.word_tokenize(input)
+                # words = nltk.word_tokenize(input)
+                words = input.split(' ')
                 x.append([vocabulary.get(word, len(vocabulary) + 1) for word in words if word not in stopwords])
                 y.append(float(label))
                 if len(x[-1]) > max_len:
@@ -338,7 +339,9 @@ def load_data(raw_file, level):
                 input = json_data['sent']
                 test_id = json_data['id'].strip('\"')
                 ids.append(test_id)
-                words = nltk.word_tokenize(input)
+
+                words = input.split(' ')
+                # words = nltk.word_tokenize(input)
                 x.append([vocabulary.get(word, len(vocabulary) + 1) for word in words if word not in stopwords])
                 if len(x[-1]) > max_len:
                     max_len = len(x[-1])
@@ -377,7 +380,8 @@ def load_data_multi(raw_file, level):
                 if len(label.split(' ')) > 1:
                     label = label.split(' ')[0]
 
-                words = nltk.word_tokenize(input)
+                words = input.split(' ')
+                # words = nltk.word_tokenize(input)
                 x.append([vocabulary.get(word, len(vocabulary) + 1) for word in words if word not in stopwords])
                 y.append(float(label))
                 y2.append(float(label2))
@@ -439,7 +443,8 @@ def load_data_multi(raw_file, level):
                 input = json_data['sent']
                 test_id = json_data['id'].strip('\"')
                 ids.append(test_id)
-                words = nltk.word_tokenize(input)
+                words = input.split(' ')
+                # words = nltk.word_tokenize(input)
                 x.append([vocabulary.get(word, len(vocabulary) + 1) for word in words if word not in stopwords])
                 if len(x[-1]) > max_len:
                     max_len = len(x[-1])
@@ -483,7 +488,9 @@ def load_data_multi_dis(raw_file, level):
                 # 单词中加入人物关系坐标
                 per1 = json_data['per1']
                 per2 = json_data['per2']
-                words = nltk.word_tokenize(input)
+
+                words = input.split(' ')
+                # words = nltk.word_tokenize(input)
                 disinfo1 = load_distance(words, per1)
                 disinfo2 = load_distance(words, per2)
 
@@ -525,13 +532,14 @@ def load_data_multi_dis(raw_file, level):
                 input = json_data['sent']
                 test_id = json_data['id'].strip('\"')
                 ids.append(test_id)
-                words = nltk.word_tokenize(input)
+                words = input.split(' ')
+                # words = nltk.word_tokenize(input)
                 x.append([vocabulary.get(word, len(vocabulary) + 1) for word in words if word not in stopwords])
 
                 # 单词中加入人物关系坐标
                 per1 = json_data['per1']
                 per2 = json_data['per2']
-                words = nltk.word_tokenize(input)
+                # words = nltk.word_tokenize(input)
                 disinfo1 = load_distance(words, per1)
                 disinfo2 = load_distance(words, per2)
                 disinfos1.append(disinfo1)
@@ -554,8 +562,12 @@ def load_data_multi_dis(raw_file, level):
 def load_sentence(x, y):
     with open('data/word_level/vocabulary_all.pkl', 'rb') as f_vocabulary:
         vocabulary = pickle.load(f_vocabulary)
-    words_a = nltk.word_tokenize(x)
-    words_b = nltk.word_tokenize(y)
+    words_a = x.split(' ')
+    # words = nltk.word_tokenize(input)
+    # words_a = nltk.word_tokenize(x)
+    words_b = y.split(' ')
+    # words = nltk.word_tokenize(input)
+    # words_b = nltk.word_tokenize(y)
     x_ = [vocabulary.get(word, len(vocabulary) + 1) for word in words_a if word not in stopwords]
     y_ = [vocabulary.get(word, len(vocabulary) + 1) for word in words_b if word not in stopwords]
     return x_, y_
@@ -581,7 +593,7 @@ def load_distance(words, per):
         else:
             per_position += 1
     # disinfo = disinfo - per_position
-    position = np.array(per_position * len(word))
+    position = np.array([per_position] * len(word))
     # 60+60， 0-120
     return disinfo - position + config.max_len_word
 

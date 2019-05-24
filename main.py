@@ -207,7 +207,7 @@ def bilstm_multi_dis(x_train, x_train_dis1, x_train_dis2, y_train, y_train2, x_v
     else:
         config.max_len = config.max_len_char
         config.vocab_len = config.vocab_len_char
-    config.exp_name = 'bilstm_multi_dis'
+    config.exp_name = 'bilstm_multi_dis_' + config.level
 
     # 训练的模型保存成文件的形式
     if not os.path.exists(config.checkpoint_dir):
