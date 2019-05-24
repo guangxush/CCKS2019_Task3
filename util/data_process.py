@@ -593,7 +593,7 @@ def load_distance(words, per):
         else:
             per_position += 1
     # disinfo = disinfo - per_position
-    position = np.array([per_position] * len(word))
+    position = np.array([per_position] * len(words))
     # 60+60， 0-120
     return disinfo - position + config.max_len_word
 
