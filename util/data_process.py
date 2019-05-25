@@ -340,8 +340,10 @@ def load_distance(words, per):
         else:
             per_position += 1
     position = np.array([per_position] * len(words))
-    # 60+60， 0-120
-    return disinfo - position + 60
+    # 60 是句子的最大长度，防止索引中存在负值
+    # 改进，句子中出现长度大于15的距离全部按照15
+    limit_dis = disinfo - position
+    return limit_dis + 60
 
 
 if __name__ == '__main__':
