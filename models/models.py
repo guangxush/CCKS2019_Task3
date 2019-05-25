@@ -9,7 +9,7 @@ from keras import backend as K
 from keras.preprocessing.sequence import pad_sequences
 from keras.models import Model
 from models.callbacks import distance_metrics, categorical_metrics, categorical_metrics_multi, categorical_metrics_multi_dis
-from keras.callbacks import ModelCheckpoint, EarlyStopping
+from keras.callbacks import ModelCheckpoint, EarlyStopping, CSVLogger
 
 from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_score, accuracy_score
 from keras.utils import to_categorical
@@ -65,7 +65,12 @@ class Models(object):
             EarlyStopping(
                 monitor=self.config.early_stopping_monitor,
                 patience=self.config.early_stopping_patience,
-                mode=self.config.early_stopping_mode
+                mode=self.config.early_stopping_mode,
+            )
+        )
+        self.callbacks.append(
+            CSVLogger(
+                filename=os.path.join(self.config.logs_dir, '%s.log' % self.config.exp_name)
             )
         )
 
@@ -317,7 +322,7 @@ class Models(object):
                                     weights=[weights], name='embedding_layer', trainable=False)
         sent_embedding = embedding_layer(sentence)
         filter_length = 3
-        conv_layer = Conv1D(filters=100, kernel_size=filter_length, padding='valid', strides=1, activation='relu')
+        conv_layer = Conv1D(filters=300, kernel_size=filter_length, padding='valid', strides=1, activation='relu')
         sent_c = conv_layer(sent_embedding)
         sent_maxpooling = MaxPooling1D(pool_size=self.config.max_len - filter_length + 1)(sent_c)
         sent_conv = Flatten()(sent_maxpooling)

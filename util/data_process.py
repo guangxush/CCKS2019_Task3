@@ -17,7 +17,7 @@ import Levenshtein
 from config import Config
 random.seed(42)
 
-stopwords = [u'', u' ', '\t', '.', '=']
+stopwords = [u'', u' ', '\t', '.', u',', '=']
 gold_label = {'entails': 1, 'neutral': 0}
 
 

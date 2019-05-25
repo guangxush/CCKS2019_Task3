@@ -51,7 +51,7 @@ def cnn_base(x_train, y_train, x_valid, y_valid, x_test, level, overwrite=False)
     else:
         config.max_len = config.max_len_char
         config.vocab_len = config.vocab_len_char
-    config.exp_name = 'cnn_base_' + level
+    config.exp_name = 'cnn_base'
 
     # 训练的模型保存成文件的形式
     if not os.path.exists(config.checkpoint_dir):
@@ -253,38 +253,39 @@ def generate_result(ids, y_test_pred):
 
 if __name__ == '__main__':
     multi_flag = True if sys.argv[1] == 'multi' else False
-    level = 'word'
-    fasttext = False
-    overwrite = False
-    print('Load %s_level data...' % level)
-    x_train, x_train_dis1, x_train_dis2, y_train, y_train2, x_valid, x_valid_dis1, x_valid_dis2, y_valid, y_valid2, x_test, x_test_dis1, x_test_dis2, vocabulary, ids = \
-        get_data(train_file='./data/sent_train_multi.txt', valid_file='./data/sent_dev_multi.txt',
-                 test_file='./data/sent_test_multi.txt', flag='train', is_multi=multi_flag, is_per_dis=True)
-    # y_test_pred = cnn_base(x_train, y_train, x_valid, y_valid, x_test, level, overwrite=overwrite)
-    y_test_pred = cnn_multi_dis(x_train, x_train_dis1, x_train_dis2, y_train, y_train2, x_valid, x_valid_dis1, x_valid_dis2, y_valid, y_valid2, x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
-    # y_test_pred = bilstm_multi_dis(x_train, x_train_dis1, x_train_dis2, y_train, y_train2, x_valid, x_valid_dis1, x_valid_dis2, y_valid, y_valid2, x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
-    generate_result(ids, y_test_pred)
+
+    # level = 'word'
+    # fasttext = False
+    # overwrite = False
+    # print('Load %s_level data...' % level)
+    # x_train, x_train_dis1, x_train_dis2, y_train, y_train2, x_valid, x_valid_dis1, x_valid_dis2, y_valid, y_valid2, x_test, x_test_dis1, x_test_dis2, vocabulary, ids = \
+    #     get_data(train_file='./data/sent_train_multi.txt', valid_file='./data/sent_dev_multi.txt',
+    #              test_file='./data/sent_test_multi.txt', flag='train', is_multi=multi_flag, is_per_dis=True)
+    # # y_test_pred = cnn_base(x_train, y_train, x_valid, y_valid, x_test, level, overwrite=overwrite)
+    # y_test_pred = cnn_multi_dis(x_train, x_train_dis1, x_train_dis2, y_train, y_train2, x_valid, x_valid_dis1, x_valid_dis2, y_valid, y_valid2, x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
+    # # y_test_pred = bilstm_multi_dis(x_train, x_train_dis1, x_train_dis2, y_train, y_train2, x_valid, x_valid_dis1, x_valid_dis2, y_valid, y_valid2, x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
+    # generate_result(ids, y_test_pred)
 
     # 多任务方法
-    # if multi_flag:
-    #     level = 'word'
-    #     fasttext = False
-    #     overwrite = False
-    #     print('Load %s_level data...' % level)
-    #     x_train, y_train, y_train2, x_valid, y_valid, y_valid2, x_test, vocabulary, ids = \
-    #         get_data(train_file='./data/sent_train_multi.txt', valid_file='./data/sent_dev_multi.txt',
-    #                  test_file='./data/sent_test_multi.txt', flag='train', is_multi=multi_flag)
-    #     # y_test_pred = cnn_base(x_train, y_train, x_valid, y_valid, x_test, level, overwrite=overwrite)
-    #     y_test_pred = cnn_multi_base(x_train, y_train, y_train2, x_valid, y_valid, y_valid2, x_test, level, overwrite=overwrite)
-    #     generate_result(ids, y_test_pred)
-    # else:
-    #     level = 'word'
-    #     fasttext = False
-    #     overwrite = False
-    #     print('Load %s_level data...' % level)
-    #     x_train, y_train, x_valid, y_valid, x_test, vocab, ids = \
-    #         get_data(train_file='./data/sent_train.txt', valid_file='./data/sent_dev.txt',
-    #                  test_file='./data/sent_test.txt', flag='train')
-    #     y_test_pred = cnn_base(x_train, y_train, x_valid, y_valid, x_test, level, overwrite=overwrite)
-    #     generate_result(ids, y_test_pred)
+    if multi_flag:
+        level = 'word'
+        fasttext = False
+        overwrite = False
+        print('Load %s_level data...' % level)
+        x_train, y_train, y_train2, x_valid, y_valid, y_valid2, x_test, vocabulary, ids = \
+            get_data(train_file='./data/sent_train_multi.txt', valid_file='./data/sent_dev_multi.txt',
+                     test_file='./data/sent_test_multi.txt', flag='train', is_multi=multi_flag)
+        # y_test_pred = cnn_base(x_train, y_train, x_valid, y_valid, x_test, level, overwrite=overwrite)
+        y_test_pred = cnn_multi_base(x_train, y_train, y_train2, x_valid, y_valid, y_valid2, x_test, level, overwrite=overwrite)
+        generate_result(ids, y_test_pred)
+    else:
+        level = 'word'
+        fasttext = False
+        overwrite = False
+        print('Load %s_level data...' % level)
+        x_train, y_train, x_valid, y_valid, x_test, vocab, ids = \
+            get_data(train_file='./data/sent_train.txt', valid_file='./data/sent_dev.txt',
+                     test_file='./data/sent_test.txt', flag='train')
+        y_test_pred = cnn_base(x_train, y_train, x_valid, y_valid, x_test, level, overwrite=overwrite)
+        generate_result(ids, y_test_pred)
 
