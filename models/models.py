@@ -128,7 +128,7 @@ class Models(object):
         x = self.pad(x)
         x_dis1 = self.pad(x_dis1)
         x_dis2 = self.pad(x_dis2)
-        y_pred = self.model.predict([x, x_dis1, x_dis2], batch_size=100, verbose=1)[0]
+        y_pred = self.model.predict([x, x_dis1, x_dis2], batch_size=100, verbose=1)
         return y_pred
 
     def evaluate(self, model_name, y_pred, y_true):
