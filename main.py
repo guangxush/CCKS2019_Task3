@@ -84,5 +84,5 @@ if __name__ == '__main__':
     x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1, x_valid_dis2, y_valid, x_test, x_test_dis1, x_test_dis2, vocabulary, ids = \
         get_data(train_file='./data/sent_train_multi.txt', valid_file='./data/sent_dev_multi.txt',
                  test_file='./data/sent_test_multi.txt', flag='train')
-    y_test_pred = cnn_base(x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1, x_valid_dis2, y_valid, x_test, x_test_dis1, x_test_dis2, vocabulary, ids, level, overwrite=overwrite)
+    y_test_pred = cnn_base(x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1, x_valid_dis2, y_valid, x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
     generate_result(ids, y_test_pred)

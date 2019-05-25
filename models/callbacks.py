@@ -26,7 +26,7 @@ class CategoricalMetrics(Callback):
         valid_y_true = np.argmax(valid_y, axis=1)
         valid_y_true.astype(int)
 
-        _val_f1 = self.new_f1(valid_results, valid_one_hot)
+        _val_f1 = self.new_f1(valid_y, valid_one_hot)
         _val_recall = recall_score(valid_y_true, valid_y_pred, average='weighted')
         _val_precision = precision_score(valid_y_true, valid_y_pred, average='weighted')
         _val_accuracy = accuracy_score(valid_y_true, valid_y_pred)
