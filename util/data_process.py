@@ -13,6 +13,7 @@ import logging
 import json
 from tqdm import tqdm
 random.seed(42)
+import math
 
 stopwords = [u'', u' ', '\t', '.', u',', '=']
 gold_label = {'entails': 1, 'neutral': 0}
@@ -343,6 +344,9 @@ def load_distance(words, per):
     # 60 是句子的最大长度，防止索引中存在负值
     # 改进，句子中出现长度大于15的距离全部按照15
     limit_dis = disinfo - position
+    for i in range(len(words)):
+        if math.abs(limit_dis[i]) > 15:
+            limit_dis[i] = 15
     return limit_dis + 60
 
 
