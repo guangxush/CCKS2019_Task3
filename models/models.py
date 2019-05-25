@@ -322,7 +322,7 @@ class Models(object):
                                     weights=[weights], name='embedding_layer', trainable=False)
         sent_embedding = embedding_layer(sentence)
         filter_length = 3
-        conv_layer = Conv1D(filters=300, kernel_size=filter_length, padding='valid', strides=1, activation='relu')
+        conv_layer = Conv1D(filters=100, kernel_size=filter_length, padding='valid', strides=1, activation='relu')
         sent_c = conv_layer(sent_embedding)
         sent_maxpooling = MaxPooling1D(pool_size=self.config.max_len - filter_length + 1)(sent_c)
         sent_conv = Flatten()(sent_maxpooling)
