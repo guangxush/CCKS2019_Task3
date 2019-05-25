@@ -244,8 +244,10 @@ def load_data(raw_file, level):
         with open('data/word_level/vocabulary_all.pkl', 'rb') as f_vocabulary:
             vocabulary = pickle.load(f_vocabulary)
         print('vocab_len_word:', len(vocabulary))
-        x = list()
-        y = list()
+        x = list()  # 句子输入
+        disinfos1 = list()  # 人物1距离坐标输入
+        disinfos2 = list()  # 人物2距离坐标输入
+        y = list()  # 预测标签的输出
         max_len = 0
         with codecs.open(raw_file, encoding='utf-8') as f_train:
             lines = f_train.readlines()
@@ -257,9 +259,21 @@ def load_data(raw_file, level):
                 # 31 4这种标签单独处理
                 if len(label.split(' ')) > 1:
                     label = label.split(' ')[0]
+
+                # 单词中加入人物关系坐标
+                per1 = json_data['per1']
+                per2 = json_data['per2']
+
                 words = input.split(' ')
+                disinfo1 = load_distance(words, per1)
+                disinfo2 = load_distance(words, per2)
+
                 x.append([vocabulary.get(word, len(vocabulary) + 1) for word in words if word not in stopwords])
                 y.append(float(label))
+                # index -> vector
+                disinfos1.append(disinfo1)
+                disinfos2.append(disinfo2)
+
                 if len(x[-1]) > max_len:
                     max_len = len(x[-1])
         print('max_word_len', max_len)
@@ -270,40 +284,17 @@ def load_data(raw_file, level):
                 max_len = len(word)
             avg_len += len(word)
         print('word_max_len:', max_len)
-        print('word_avg_len:', float(avg_len)/len(vocabulary))
-        return x, y, vocabulary
-    # 字符级别暂时不用
-    elif level == 'char':
-        with open('data/char_level/vocabulary_all.pkl', 'rb') as f_vocabulary:
-            vocabulary = pickle.load(f_vocabulary)
-        print('vocab_len_char:', len(vocabulary))
-        x = list()
-        y = list()
-        char_len = 0
-        max_len = 0
-        with codecs.open(raw_file, encoding='utf-8') as f_train:
-            lines = f_train.readlines()
-            print(lines[0])
-            for line in tqdm(lines):
-                json_data = json.loads(line)
-                input = json_data['sent']
-                label = json_data['label']
-                label = gold_label[label]
-                x.append([vocabulary.get(char, len(vocabulary) + 1) for char in input if char not in stopwords])
-                y.append(float(label))
-                char_len = len(x[-1])
-                if len(x[-1]) > max_len:
-                    max_len = len(x[-1])
+        print('word_avg_len:', float(avg_len) / len(vocabulary))
+        return x, disinfos1, disinfos2, y, vocabulary
 
-        print('avg_char_len:', float(char_len) / (len(x)*2))
-        print('max_char_len:', max_len)
-        return x, y, vocabulary
     # 测试集数据加载
     elif level == 'test':
         with open('data/word_level/vocabulary_all.pkl', 'rb') as f_vocabulary:
             vocabulary = pickle.load(f_vocabulary)
         print('vocab_len_word:', len(vocabulary))
-        x = list()
+        x = list()  # 句子输入
+        disinfos1 = list()  # 人物1距离坐标输入
+        disinfos2 = list()  # 人物2距离坐标输入
         ids = list()
         max_len = 0
         with codecs.open(raw_file, encoding='utf-8') as f_train:
@@ -314,9 +305,17 @@ def load_data(raw_file, level):
                 input = json_data['sent']
                 test_id = json_data['id'].strip('\"')
                 ids.append(test_id)
-
                 words = input.split(' ')
                 x.append([vocabulary.get(word, len(vocabulary) + 1) for word in words if word not in stopwords])
+
+                # 单词中加入人物关系坐标
+                per1 = json_data['per1']
+                per2 = json_data['per2']
+                disinfo1 = load_distance(words, per1)
+                disinfo2 = load_distance(words, per2)
+                disinfos1.append(disinfo1)
+                disinfos2.append(disinfo2)
+
                 if len(x[-1]) > max_len:
                     max_len = len(x[-1])
         print('max_word_len', max_len)
@@ -328,7 +327,21 @@ def load_data(raw_file, level):
             avg_len += len(word)
         print('char_max_len:', max_len)
         print('char_avg_len:', float(avg_len) / len(vocabulary))
-        return ids, x, vocabulary
+        return ids, x, disinfos1, disinfos2, vocabulary
+
+
+# 加入坐标距离
+def load_distance(words, per):
+    disinfo = np.arange(len(words))
+    per_position = 0
+    for word in words:
+        if per == word:
+            break
+        else:
+            per_position += 1
+    position = np.array([per_position] * len(words))
+    # 60+60， 0-120
+    return disinfo - position + 60
 
 
 if __name__ == '__main__':

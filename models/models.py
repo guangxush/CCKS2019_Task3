@@ -1,7 +1,7 @@
 # -*- encoding:utf-8 -*-
 
 from keras.engine import Input
-from keras.layers import Embedding, Dropout, Conv1D, Dense, Flatten, Activation, MaxPooling1D
+from keras.layers import Embedding, Dropout, Conv1D, Dense, Flatten, Activation, MaxPooling1D, concatenate
 from keras.preprocessing.sequence import pad_sequences
 from keras.models import Model
 from models.callbacks import categorical_metrics
@@ -56,57 +56,79 @@ class Models(object):
     # cnn基本demo
     def cnn_base(self):
         sentence = Input(shape=(self.config.max_len,), dtype='int32', name='sent_base')
+        dis1 = Input(shape=(self.config.max_len,), dtype='float32', name='disinfos1')
+        dis2 = Input(shape=(self.config.max_len,), dtype='float32', name='disinfos2')
         weights = np.load(os.path.join(self.config.embedding_path, self.config.embedding_file))
-        # trainable修改为False
         embedding_layer = Embedding(input_dim=weights.shape[0],
                                     output_dim=weights.shape[-1],
-                                    weights=[weights], name='embedding_layer', trainable=False)
+                                    weights=[weights], name='embedding_layer', trainable=True)
+        embedding_dis1_layer = Embedding(input_dim=self.config.max_len * 2,
+                                         output_dim=5,
+                                         name='embedding_dis1_layer', trainable=True)
+
+        embedding_dis2_layer = Embedding(input_dim=self.config.max_len * 2,
+                                         output_dim=5,
+                                         name='embedding_dis2_layer', trainable=True)
+
         sent_embedding = embedding_layer(sentence)
+        dis1_embedding = embedding_dis1_layer(dis1)
+        dis2_emdedding = embedding_dis2_layer(dis2)
+        all_input = concatenate([sent_embedding, dis1_embedding, dis2_emdedding], axis=2)
         filter_length = 3
-        conv_layer = Conv1D(filters=100, kernel_size=filter_length, padding='valid', strides=1, activation='relu')
-        sent_c = conv_layer(sent_embedding)
+        conv_layer = Conv1D(filters=300, kernel_size=filter_length, padding='valid', strides=1, activation='relu')
+        sent_c = conv_layer(all_input)
         sent_maxpooling = MaxPooling1D(pool_size=self.config.max_len - filter_length + 1)(sent_c)
         sent_conv = Flatten()(sent_maxpooling)
         sent_conv = Activation('relu')(sent_conv)
         sent = Dropout(0.5)(sent_conv)
         output = Dense(self.config.classes, activation='softmax', name='output')(sent)
 
-        inputs = [sentence]
+        inputs = [sentence, dis1, dis2]
         self.model = Model(inputs=inputs, outputs=output)
-        self.model.compile(loss='categorical_crossentropy', optimizer=self.config.optimizer,
+        self.model.compile(loss='categorical_crossentropy',
+                           optimizer=self.config.optimizer,
                            metrics=['acc'])
 
     def pad(self, x_data):
         return pad_sequences(x_data, maxlen=self.config.max_len, padding='post', truncating='post')
 
-    def fit(self, x_train, y_train, x_valid, y_valid):
+    def fit(self, x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1, x_valid_dis2, y_valid):
         x_train = self.pad(x_train)
-        x_valid = self.pad(x_valid)
+        x_train_dis1 = np.array(x_train_dis1)
+        x_train_dis2 = np.array(x_train_dis2)
+
+        x_train_dis1 = self.pad(x_train_dis1)
+        x_train_dis2 = self.pad(x_train_dis2)
 
         # 结果集one-hot，不能直接使用数字作为标签
         y_train = to_categorical(y_train)
+
+        x_valid = self.pad(x_valid)
+        x_valid_dis1 = np.array(x_valid_dis1)
+        x_valid_dis2 = np.array(x_valid_dis2)
+
+        x_valid_dis1 = self.pad(x_valid_dis1)
+        x_valid_dis2 = self.pad(x_valid_dis2)
+
+        # 结果集one-hot，不能直接使用数字作为标签
         y_valid = to_categorical(y_valid)
 
-        y_train = np.asarray(y_train)
-        y_valid = np.asarray(y_valid)
-
-        self.callbacks = []
         # 初始化回调函数并用其训练
+        self.callbacks = []
         self.init_callbacks()
-        self.model.fit(x_train, y_train,
+        self.model.fit([x_train, x_train_dis1, x_train_dis2], y_train,
                        epochs=self.config.num_epochs,
                        verbose=self.config.verbose_training,
                        batch_size=self.config.batch_size,
-                       validation_data=(x_valid, y_valid),
+                       validation_data=([x_valid, x_valid_dis1, x_valid_dis2], y_valid),
                        callbacks=self.callbacks,
                        class_weight='balanced')
 
-    def predict(self, x, x_features=None):
+    def predict(self, x, x_dis1, x_dis2):
         x = self.pad(x)
-        if x_features is not None:
-            y_pred = self.model.predict([x, x_features], batch_size=100, verbose=1)
-        else:
-            y_pred = self.model.predict(x, batch_size=100, verbose=1)
+        x_dis1 = self.pad(x_dis1)
+        x_dis2 = self.pad(x_dis2)
+        y_pred = self.model.predict([x, x_dis1, x_dis2], batch_size=100, verbose=1)[0]
         return y_pred
 
     def evaluate(self, model_name, y_pred, y_true):
