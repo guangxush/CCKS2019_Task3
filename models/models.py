@@ -134,12 +134,12 @@ class Models(object):
     def evaluate(self, model_name, y_pred, y_true):
         score_path = self.config.score_path
         fw = codecs.open(score_path, 'a', encoding='utf-8')
-        y_pred_for_f1 = y_pred
         y_true_for_f1 = to_categorical(y_true, 35)
         y_pred = [np.argmax(y) for y in y_pred]
+        y_pred_for_f1 = to_categorical(y_pred, 35)
         precision = precision_score(y_true, y_pred, average='micro')
         recall = recall_score(y_true, y_pred, average='micro')
-        f1 = self.new_f1(y_true_for_f1, y_pred_for_f1)
+        f1 = self.new_f1(y_pred_for_f1, y_true_for_f1)
         accuracy = accuracy_score(y_true, y_pred)
         auc = categorical_metrics.multiclass_roc_auc_score(y_true, y_pred, average="weighted")
         print('\n- **Evaluation results of %s model**' % model_name)
