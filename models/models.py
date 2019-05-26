@@ -62,7 +62,12 @@ class Models(object):
             EarlyStopping(
                 monitor=self.config.early_stopping_monitor,
                 patience=self.config.early_stopping_patience,
-                mode=self.config.early_stopping_mode
+                mode=self.config.early_stopping_mode,
+            )
+        )
+        self.callbacks.append(
+            CSVLogger(
+                filename=os.path.join(self.config.logs_dir, '%s.log' % self.config.exp_name)
             )
         )
 
