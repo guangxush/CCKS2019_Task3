@@ -12,10 +12,8 @@ import random
 import logging
 import json
 from tqdm import tqdm
-# import nltk
-import Levenshtein
-from config import Config
 random.seed(42)
+import math
 
 stopwords = [u'', u' ', '\t', '.', u',', '=']
 gold_label = {'entails': 1, 'neutral': 0}
@@ -49,25 +47,6 @@ def generate_embedding(level):
             continue
         emb[i, :] = weights[d[w], :]
     np.save(open('../modfile/sst_100_dim_all.embeddings', 'wb'), emb)
-
-
-# def generate_fasttext_embedding(level):
-#     data_path = 'data/%s_level' % level
-#
-#     model = train_unsupervised(input=os.path.join(data_path, 'corpus_all.txt'), model='skipgram', dim=300, epoch=10,
-#                                minCount=1, wordNgrams=3)
-#     # 暂时没有下载这个包，所以去掉这个方法
-#
-#     vocab = pickle.load(open(os.path.join(data_path, 'vocabulary_all.pkl'), 'rb'))
-#     d = dict([(w, 0) for w in model.get_words()])
-#     print len(d)
-#     emb = np.zeros(shape=(len(vocab) + 2, 300), dtype='float32')
-#     print len(vocab)
-#     for w, i in vocab.items():
-#         if w not in d:
-#             continue
-#         emb[i, :] = model.get_word_vector(w)
-#     np.save(open(os.path.join(data_path, 'xxx_300_dim_all.fasttext'), 'wb'), emb)
 
 
 # 训练集、验证集划分
@@ -266,8 +245,10 @@ def load_data(raw_file, level):
         with open('data/word_level/vocabulary_all.pkl', 'rb') as f_vocabulary:
             vocabulary = pickle.load(f_vocabulary)
         print('vocab_len_word:', len(vocabulary))
-        x = list()
-        y = list()
+        x = list()  # 句子输入
+        disinfos1 = list()  # 人物1距离坐标输入
+        disinfos2 = list()  # 人物2距离坐标输入
+        y = list()  # 预测标签的输出
         max_len = 0
         with codecs.open(raw_file, encoding='utf-8') as f_train:
             lines = f_train.readlines()
@@ -280,10 +261,20 @@ def load_data(raw_file, level):
                 if len(label.split(' ')) > 1:
                     label = label.split(' ')[0]
 
-                # words = nltk.word_tokenize(input)
+                # 单词中加入人物关系坐标
+                per1 = json_data['per1']
+                per2 = json_data['per2']
+
                 words = input.split(' ')
+                disinfo1 = load_distance(words, per1)
+                disinfo2 = load_distance(words, per2)
+
                 x.append([vocabulary.get(word, len(vocabulary) + 1) for word in words if word not in stopwords])
                 y.append(float(label))
+                # index -> vector
+                disinfos1.append(disinfo1)
+                disinfos2.append(disinfo2)
+
                 if len(x[-1]) > max_len:
                     max_len = len(x[-1])
         print('max_word_len', max_len)
@@ -294,145 +285,17 @@ def load_data(raw_file, level):
                 max_len = len(word)
             avg_len += len(word)
         print('word_max_len:', max_len)
-        print('word_avg_len:', float(avg_len)/len(vocabulary))
-        return x, y, vocabulary
-    # 字符级别暂时不用
-    elif level == 'char':
-        with open('data/char_level/vocabulary_all.pkl', 'rb') as f_vocabulary:
-            vocabulary = pickle.load(f_vocabulary)
-        print('vocab_len_char:', len(vocabulary))
-        x = list()
-        y = list()
-        char_len = 0
-        max_len = 0
-        with codecs.open(raw_file, encoding='utf-8') as f_train:
-            lines = f_train.readlines()
-            print(lines[0])
-            for line in tqdm(lines):
-                json_data = json.loads(line)
-                input = json_data['sent']
-                label = json_data['label']
+        print('word_avg_len:', float(avg_len) / len(vocabulary))
+        return x, disinfos1, disinfos2, y, vocabulary
 
-                label = gold_label[label]
-                x.append([vocabulary.get(char, len(vocabulary) + 1) for char in input if char not in stopwords])
-                y.append(float(label))
-                char_len = len(x[-1])
-                if len(x[-1]) > max_len:
-                    max_len = len(x[-1])
-
-        print('avg_char_len:', float(char_len) / (len(x)*2))
-        print('max_char_len:', max_len)
-        return x, y, vocabulary
     # 测试集数据加载
     elif level == 'test':
         with open('data/word_level/vocabulary_all.pkl', 'rb') as f_vocabulary:
             vocabulary = pickle.load(f_vocabulary)
         print('vocab_len_word:', len(vocabulary))
-        x = list()
-        ids = list()
-        max_len = 0
-        with codecs.open(raw_file, encoding='utf-8') as f_train:
-            lines = f_train.readlines()
-            print(lines[0])
-            for line in tqdm(lines):
-                json_data = json.loads(line)
-                input = json_data['sent']
-                test_id = json_data['id'].strip('\"')
-                ids.append(test_id)
-
-                words = input.split(' ')
-                # words = nltk.word_tokenize(input)
-                x.append([vocabulary.get(word, len(vocabulary) + 1) for word in words if word not in stopwords])
-                if len(x[-1]) > max_len:
-                    max_len = len(x[-1])
-        print('max_word_len', max_len)
-        avg_len = 0
-        max_len = 0
-        for word, id in vocabulary.items():
-            if len(word) > max_len:
-                max_len = len(word)
-            avg_len += len(word)
-        print('char_max_len:', max_len)
-        print('char_avg_len:', float(avg_len) / len(vocabulary))
-        return ids, x, vocabulary
-
-
-# 根据不同的文件类型加载数据
-def load_data_multi(raw_file, level):
-    # 字符级别的训练集和验证集
-    if level == 'word':
-        with open('data/word_level/vocabulary_all.pkl', 'rb') as f_vocabulary:
-            vocabulary = pickle.load(f_vocabulary)
-        print('vocab_len_word:', len(vocabulary))
-        x = list()
-        y = list()
-        y2 = list()
-        max_len = 0
-        with codecs.open(raw_file, encoding='utf-8') as f_train:
-            lines = f_train.readlines()
-            print(lines[0])
-            for line in tqdm(lines):
-                json_data = json.loads(line)
-                input = json_data['sent']
-                label = json_data['label']
-                label2 = json_data['label2']
-                # 31 4这种标签单独处理
-                if len(label.split(' ')) > 1:
-                    label = label.split(' ')[0]
-
-                words = input.split(' ')
-                # words = nltk.word_tokenize(input)
-                x.append([vocabulary.get(word, len(vocabulary) + 1) for word in words if word not in stopwords])
-                y.append(float(label))
-                y2.append(float(label2))
-                if len(x[-1]) > max_len:
-                    max_len = len(x[-1])
-        print('max_word_len', max_len)
-        avg_len = 0
-        max_len = 0
-        for word, id in vocabulary.items():
-            if len(word) > max_len:
-                max_len = len(word)
-            avg_len += len(word)
-        print('word_max_len:', max_len)
-        print('word_avg_len:', float(avg_len)/len(vocabulary))
-        return x, y, y2, vocabulary
-    # 字符级别暂时不用
-    elif level == 'char':
-        with open('data/char_level/vocabulary_all.pkl', 'rb') as f_vocabulary:
-            vocabulary = pickle.load(f_vocabulary)
-        print('vocab_len_char:', len(vocabulary))
-        x = list()
-        y = list()
-        y2 = list()
-        char_len = 0
-        max_len = 0
-        with codecs.open(raw_file, encoding='utf-8') as f_train:
-            lines = f_train.readlines()
-            print(lines[0])
-            for line in tqdm(lines):
-                json_data = json.loads(line)
-                input = json_data['sent']
-                label = json_data['label']
-                label2 = json_data['label2']
-                if len(label.split(' ')) > 1:
-                    label = label.split(' ')[0]
-                x.append([vocabulary.get(char, len(vocabulary) + 1) for char in input if char not in stopwords])
-                y.append(float(label))
-                y2.append(float(label2))
-                char_len = len(x[-1])
-                if len(x[-1]) > max_len:
-                    max_len = len(x[-1])
-
-        print('avg_char_len:', float(char_len) / (len(x)*2))
-        print('max_char_len:', max_len)
-        return x, y, y2, vocabulary
-    # 测试集数据加载
-    elif level == 'test':
-        with open('data/word_level/vocabulary_all.pkl', 'rb') as f_vocabulary:
-            vocabulary = pickle.load(f_vocabulary)
-        print('vocab_len_word:', len(vocabulary))
-        x = list()
+        x = list()  # 句子输入
+        disinfos1 = list()  # 人物1距离坐标输入
+        disinfos2 = list()  # 人物2距离坐标输入
         ids = list()
         max_len = 0
         with codecs.open(raw_file, encoding='utf-8') as f_train:
@@ -444,8 +307,16 @@ def load_data_multi(raw_file, level):
                 test_id = json_data['id'].strip('\"')
                 ids.append(test_id)
                 words = input.split(' ')
-                # words = nltk.word_tokenize(input)
                 x.append([vocabulary.get(word, len(vocabulary) + 1) for word in words if word not in stopwords])
+
+                # 单词中加入人物关系坐标
+                per1 = json_data['per1']
+                per2 = json_data['per2']
+                disinfo1 = load_distance(words, per1)
+                disinfo2 = load_distance(words, per2)
+                disinfos1.append(disinfo1)
+                disinfos2.append(disinfo2)
+
                 if len(x[-1]) > max_len:
                     max_len = len(x[-1])
         print('max_word_len', max_len)
@@ -457,7 +328,7 @@ def load_data_multi(raw_file, level):
             avg_len += len(word)
         print('char_max_len:', max_len)
         print('char_avg_len:', float(avg_len) / len(vocabulary))
-        return ids, x, vocabulary
+        return ids, x, disinfos1, disinfos2, vocabulary
 
 
 # 根据不同的文件类型加载数据
@@ -490,7 +361,6 @@ def load_data_multi_dis(raw_file, level):
                 per2 = json_data['per2']
 
                 words = input.split(' ')
-                # words = nltk.word_tokenize(input)
                 disinfo1 = load_distance(words, per1)
                 disinfo2 = load_distance(words, per2)
 
@@ -533,13 +403,11 @@ def load_data_multi_dis(raw_file, level):
                 test_id = json_data['id'].strip('\"')
                 ids.append(test_id)
                 words = input.split(' ')
-                # words = nltk.word_tokenize(input)
                 x.append([vocabulary.get(word, len(vocabulary) + 1) for word in words if word not in stopwords])
 
                 # 单词中加入人物关系坐标
                 per1 = json_data['per1']
                 per2 = json_data['per2']
-                # words = nltk.word_tokenize(input)
                 disinfo1 = load_distance(words, per1)
                 disinfo2 = load_distance(words, per2)
                 disinfos1.append(disinfo1)
@@ -559,32 +427,8 @@ def load_data_multi_dis(raw_file, level):
         return ids, x, disinfos1, disinfos2, vocabulary
 
 
-def load_sentence(x, y):
-    with open('data/word_level/vocabulary_all.pkl', 'rb') as f_vocabulary:
-        vocabulary = pickle.load(f_vocabulary)
-    words_a = x.split(' ')
-    # words = nltk.word_tokenize(input)
-    # words_a = nltk.word_tokenize(x)
-    words_b = y.split(' ')
-    # words = nltk.word_tokenize(input)
-    # words_b = nltk.word_tokenize(y)
-    x_ = [vocabulary.get(word, len(vocabulary) + 1) for word in words_a if word not in stopwords]
-    y_ = [vocabulary.get(word, len(vocabulary) + 1) for word in words_b if word not in stopwords]
-    return x_, y_
-
-
-# 加入编辑距离
-def load_levenshtein_distance(words, per):
-    disinfo = []
-    for word in words:
-        if word not in stopwords:
-            disinfo.append(Levenshtein.distance(word, per))
-    return disinfo
-
-
 # 加入坐标距离
 def load_distance(words, per):
-    config = Config()
     disinfo = np.arange(len(words))
     per_position = 0
     for word in words:
@@ -592,10 +436,14 @@ def load_distance(words, per):
             break
         else:
             per_position += 1
-    # disinfo = disinfo - per_position
     position = np.array([per_position] * len(words))
-    # 60+60， 0-120
-    return disinfo - position + config.max_len_word
+    # 60 是句子的最大长度，防止索引中存在负值
+    # 改进，句子中出现长度大于15的距离全部按照15
+    limit_dis = disinfo - position
+    # for i in range(len(words)):
+    #     if abs(limit_dis[i]) > 15:
+    #         limit_dis[i] = 15
+    return limit_dis + 60
 
 
 if __name__ == '__main__':
@@ -613,15 +461,4 @@ if __name__ == '__main__':
     # 训练词向量
     generate_embedding('word')
 
-    # fasttext暂时不用
-    # generate_fasttext_embedding('word')
-
-    # 字符级别的暂时不用
-    # vocab = build_char_level_vocabulary_all('data/xxx_train.jsonl', 'data/xxx_dev.jsonl', 'data/xxx_test.jsonl')
-    # with open('data/char_level/vocabulary_all.pkl', 'wb') as vocabulary_pkl:
-    #     pickle.dump(vocab, vocabulary_pkl, -1)
-    #     print(len(vocab))
-    # build_char_level_corpus_all('data/xxx_train.jsonl', 'data/xxx_dev.jsonl', 'data/xxx_test.jsonl')
-    # generate_embedding('char')
-    # # generate_fasttext_embedding('char')
 
