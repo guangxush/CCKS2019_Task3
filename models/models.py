@@ -155,17 +155,17 @@ class Models(object):
         embedding_layer = Embedding(input_dim=weights.shape[0],
                                     output_dim=weights.shape[-1],
                                     weights=[weights], name='embedding_layer', trainable=False)
-        embedding_dis1_layer = Embedding(input_dim=self.config.max_len * 2,
-                                         output_dim=5,
-                                         name='embedding_dis1_layer', trainable=True)
+        embedding_dis_layer = Embedding(input_dim=self.config.max_len * 2,
+                                        output_dim=5,
+                                        name='embedding_dis_layer', trainable=True)
 
-        embedding_dis2_layer = Embedding(input_dim=self.config.max_len * 2,
-                                         output_dim=5,
-                                         name='embedding_dis2_layer', trainable=True)
+        # embedding_dis2_layer = Embedding(input_dim=self.config.max_len * 2,
+        #                                  output_dim=5,
+        #                                  name='embedding_dis2_layer', trainable=True)
 
         sent_embedding = embedding_layer(sentence)
-        dis1_embedding = embedding_dis1_layer(dis1)
-        dis2_emdedding = embedding_dis2_layer(dis2)
+        dis1_embedding = embedding_dis_layer(dis1)
+        dis2_emdedding = embedding_dis_layer(dis2)
         all_input = concatenate([sent_embedding, dis1_embedding, dis2_emdedding], axis=2)
         filter_length = 3
         conv_layer = Conv1D(filters=300, kernel_size=filter_length, padding='valid', strides=1, activation='relu')
@@ -181,6 +181,7 @@ class Models(object):
         inputs = [sentence, dis1, dis2]
         outputs = [output, output2]
         self.model = Model(inputs=inputs, outputs=outputs)
+        self.model.summary()
         self.model.compile(loss={'output': 'categorical_crossentropy', 'output2': 'categorical_crossentropy'},
                            optimizer=self.config.optimizer,
                            loss_weights={'output': 1., 'output2': 1.},
