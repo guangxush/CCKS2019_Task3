@@ -110,7 +110,7 @@ def model_select(model_name, x_train, x_train_dis1, x_train_dis2, y_train, x_val
         return
 
     if overwrite or not os.path.exists(os.path.join(config.checkpoint_dir, '%s.hdf5' % model_name)):
-        print('Start training the cnn model...')
+        print('Start training the ' + model_name + ' model...')
         model.fit(x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1, x_valid_dis2, y_valid)
     model.load_weight()
     print('Start evaluate the ' + model_name + ' model...')
