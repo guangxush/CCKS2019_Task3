@@ -71,10 +71,29 @@ def data_analysis(label_file):
     return
 
 
+# 内部原始词向量语料
+def word_corpus_generate(train_file, dev_file, test_file, out_file):
+    with codecs.open(train_file, encoding='utf-8') as sent, codecs.open(out_file, 'w', encoding='utf-8') as fw:
+        for line_sent in sent:
+            line_sent = line_sent.strip('\r\n').split('\t')
+            fw.write(line_sent[3] + '\n')
+    with codecs.open(dev_file, encoding='utf-8') as sent, codecs.open(out_file, 'a', encoding='utf-8') as fw:
+        for line_sent in sent:
+            line_sent = line_sent.strip('\r\n').split('\t')
+            fw.write(line_sent[3] + '\n')
+    with codecs.open(test_file, encoding='utf-8') as sent, codecs.open(out_file, 'a', encoding='utf-8') as fw:
+        for line_sent in sent:
+            line_sent = line_sent.strip('\r\n').split('\t')
+            fw.write(line_sent[3] + '\n')
+    return
+
+
 if __name__ == '__main__':
     # zero的数据上限
     zero_threshold = 3000
     data_analysis('../raw_data/open_data/sent_relation_train.txt')
+    # 产生内部的词库
+    word_corpus_generate('../raw_data/open_data/sent_train.txt', '../raw_data/open_data/sent_dev.txt', '../raw_data/open_data/sent_test.txt', '../data/word_level/corpus_raw.txt')
     multi_flag = True if sys.argv[1] == 'multi' else False
     # 多任务方法
     if multi_flag:

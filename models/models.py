@@ -154,7 +154,7 @@ class Models(object):
         weights = np.load(os.path.join(self.config.embedding_path, self.config.embedding_file))
         embedding_layer = Embedding(input_dim=weights.shape[0],
                                     output_dim=weights.shape[-1],
-                                    weights=[weights], name='embedding_layer', trainable=True)
+                                    weights=[weights], name='embedding_layer', trainable=False)
         embedding_dis1_layer = Embedding(input_dim=self.config.max_len * 2,
                                          output_dim=5,
                                          name='embedding_dis1_layer', trainable=True)

@@ -12,14 +12,14 @@ import random
 import logging
 import json
 from tqdm import tqdm
+
 random.seed(42)
-import math
 
 stopwords = [u'', u' ', '\t', '.', u',', '=']
 gold_label = {'entails': 1, 'neutral': 0}
 
 
-# 训练词向量得到embedding
+# 训练外部词向量得到embedding
 def generate_embedding(level):
     data_path = '../data/%s_level' % level
     save_model_file = '../modfile/Word2Vec.mod'
@@ -47,6 +47,36 @@ def generate_embedding(level):
             continue
         emb[i, :] = weights[d[w], :]
     np.save(open('../modfile/sst_100_dim_all.embeddings', 'wb'), emb)
+
+
+# 训练原始语料中的词向量得到embedding
+def generate_embedding_raw(level):
+    data_path = '../data/%s_level' % level
+    save_model_file = '../modfile/Raw_Word2Vec.mod'
+    save_model_name = 'raw_sst_300_dim_all.embeddings'
+    word_size = 300
+
+    logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+    # 输入的语料是用jieba分好词的文本
+    sentences = word2vec.Text8Corpus(os.path.join(data_path, 'corpus_raw.txt'))  # 加载语料
+    # 第一个参数是训练语料，第二个参数是小于该数的单词会被剔除，默认值为5, 第三个参数是神经网络的隐藏层单元数，默认为100
+    model = word2vec.Word2Vec(sentences, min_count=1, size=word_size, window=5, workers=4)
+    model.save(save_model_file)
+    model.wv.save_word2vec_format(save_model_name, binary=False)  # 以二进制类型保存模型以便重用
+
+    vocab = pickle.load(open(os.path.join(data_path, 'raw_vocabulary_all.pkl'), 'rb'))
+    weights = model.wv.syn0
+    # 得到词向量字典
+    d = dict([(k, v.index) for k, v in model.wv.vocab.items()])
+    emb = np.zeros(shape=(len(vocab) + 2, word_size), dtype='float32')
+    model.save('../modfile/Raw_Word2Vec.mod')
+    model.wv.save_word2vec_format('../modfile/Raw_Word2Vec.mod', binary=False)
+    # vocab 形式： {word : index}
+    for w, i in vocab.items():
+        if w not in d:
+            continue
+        emb[i, :] = weights[d[w], :]
+    np.save(open('../modfile/raw_sst_300_dim_all.embeddings', 'wb'), emb)
 
 
 # 训练集、验证集划分
@@ -89,7 +119,8 @@ def build_word_level_corpus_all(train_file, valid_file, test_file):
             json_data = json.loads(line)
             sentences.append(json_data['sent'])
 
-    target_lines = [' '.join([w for w in sentence.split(' ') if w not in stopwords]).lower() + '\n' for sentence in sentences]
+    target_lines = [' '.join([w for w in sentence.split(' ') if w not in stopwords]).lower() + '\n' for sentence in
+                    sentences]
 
     with codecs.open('../data/word_level/raw_corpus_all.txt', 'w', encoding='utf-8') as f_corpus:
         f_corpus.writelines(target_lines)
@@ -152,7 +183,7 @@ def build_word_level_vocabulary_all(train_file, valid_file, test_file):
     print(len(word_list))
     word_list = [word for word in word_list if word not in stopwords]
     # 转换成字典并返回
-    return dict((word, idx+1) for idx, word in enumerate(word_list))
+    return dict((word, idx + 1) for idx, word in enumerate(word_list))
 
 
 # 从外部语料中建立单词级别的语料
@@ -196,7 +227,7 @@ def build_char_level_vocabulary_all(train_file, valid_file, test_file):
     corpus = u''.join(sentences)
     char_list = list(set([char for char in corpus]))
 
-    return dict((char, idx+1) for idx, char in enumerate(char_list))
+    return dict((char, idx + 1) for idx, char in enumerate(char_list))
 
 
 # 获得标签
@@ -381,7 +412,7 @@ def load_data_multi_dis(raw_file, level):
                 max_len = len(word)
             avg_len += len(word)
         print('word_max_len:', max_len)
-        print('word_avg_len:', float(avg_len)/len(vocabulary))
+        print('word_avg_len:', float(avg_len) / len(vocabulary))
         return x, disinfos1, disinfos2, y, y2, vocabulary
 
     # 测试集数据加载
@@ -447,7 +478,6 @@ def load_distance(words, per):
 
 
 if __name__ == '__main__':
-
     vocab = build_word_level_vocabulary_all('../data/sent_train.txt', '../data/sent_dev.txt', '../data/sent_test.txt')
     with open('../data/word_level/vocabulary_origin_all.pkl', 'wb') as vocabulary_pkl:
         pickle.dump(vocab, vocabulary_pkl, -1)
@@ -457,8 +487,7 @@ if __name__ == '__main__':
     # build_word_level_corpus_all('../data/sent_train.txt', '../data/sent_dev.txt', '../data/sent_test.txt')
 
     # 引入外部数据集
-    build_word_level_vocabulary_from_out_corpus('../raw_data/open_data/text.txt', '../data/word_level/text.txt')
+    # build_word_level_vocabulary_from_out_corpus('../raw_data/open_data/text.txt', '../data/word_level/text.txt')
     # 训练词向量
-    generate_embedding('word')
-
-
+    # generate_embedding('word')
+    generate_embedding_raw('word')
