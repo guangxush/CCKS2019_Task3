@@ -1,7 +1,7 @@
 # -*- encoding:utf-8 -*-
 
 from keras.engine import Input
-from keras.layers import Embedding, Dropout, Conv1D, Dense, Flatten, Activation, MaxPooling1D, concatenate
+from keras.layers import Embedding, Dropout, Conv1D, Dense, Flatten, Activation, MaxPooling1D, concatenate, Bidirectional, LSTM
 from keras.preprocessing.sequence import pad_sequences
 from keras.models import Model
 from models.callbacks import categorical_metrics
@@ -81,6 +81,37 @@ class Models(object):
         sent_conv = Flatten()(sent_maxpooling)
         sent_conv = Activation('relu')(sent_conv)
         sent = Dropout(0.5)(sent_conv)
+        output = Dense(self.config.classes, activation='softmax', name='output')(sent)
+
+        inputs = [sentence, dis1, dis2]
+        self.model = Model(inputs=inputs, outputs=output)
+        self.model.compile(loss='categorical_crossentropy',
+                           optimizer=self.config.optimizer,
+                           metrics=['acc'])
+
+    # bilstm基本demo
+    def bilstm_base(self):
+        sentence = Input(shape=(self.config.max_len,), dtype='int32', name='sent_base')
+        dis1 = Input(shape=(self.config.max_len,), dtype='float32', name='disinfos1')
+        dis2 = Input(shape=(self.config.max_len,), dtype='float32', name='disinfos2')
+        weights = np.load(os.path.join(self.config.embedding_path, self.config.embedding_file))
+        embedding_layer = Embedding(input_dim=weights.shape[0],
+                                    output_dim=weights.shape[-1],
+                                    weights=[weights], name='embedding_layer', trainable=False)
+        embedding_dis1_layer = Embedding(input_dim=self.config.max_len * 2,
+                                         output_dim=5,
+                                         name='embedding_dis1_layer', trainable=True)
+
+        embedding_dis2_layer = Embedding(input_dim=self.config.max_len * 2,
+                                         output_dim=5,
+                                         name='embedding_dis2_layer', trainable=True)
+
+        sent_embedding = embedding_layer(sentence)
+        dis1_embedding = embedding_dis1_layer(dis1)
+        dis2_emdedding = embedding_dis2_layer(dis2)
+        all_input = concatenate([sent_embedding, dis1_embedding, dis2_emdedding], axis=2)
+        bilstm_layer = Bidirectional(LSTM(128))(all_input)
+        sent = Dropout(0.5)(bilstm_layer)
         output = Dense(self.config.classes, activation='softmax', name='output')(sent)
 
         inputs = [sentence, dis1, dis2]
