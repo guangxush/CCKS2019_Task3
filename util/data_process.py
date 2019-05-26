@@ -23,7 +23,7 @@ gold_label = {'entails': 1, 'neutral': 0}
 def generate_embedding(level):
     data_path = '../data/%s_level' % level
     save_model_file = '../modfile/Word2Vec.mod'
-    save_model_name = 'sst_100_dim_all.embeddings'
+    save_model_name = '../modfile/sst_100_dim_all.embeddings'
     word_size = 100
 
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
@@ -53,7 +53,7 @@ def generate_embedding(level):
 def generate_embedding_raw(level):
     data_path = '../data/%s_level' % level
     save_model_file = '../modfile/Raw_Word2Vec.mod'
-    save_model_name = 'raw_sst_300_dim_all.embeddings'
+    save_model_name = '../modfile/raw_sst_300_dim_all.embeddings'
     word_size = 300
 
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
@@ -64,7 +64,7 @@ def generate_embedding_raw(level):
     model.save(save_model_file)
     model.wv.save_word2vec_format(save_model_name, binary=False)  # 以二进制类型保存模型以便重用
 
-    vocab = pickle.load(open(os.path.join(data_path, 'raw_vocabulary_all.pkl'), 'rb'))
+    vocab = pickle.load(open(os.path.join(data_path, 'vocabulary_all.pkl'), 'rb'))
     weights = model.wv.syn0
     # 得到词向量字典
     d = dict([(k, v.index) for k, v in model.wv.vocab.items()])
@@ -479,7 +479,7 @@ def load_distance(words, per):
 
 if __name__ == '__main__':
     vocab = build_word_level_vocabulary_all('../data/sent_train.txt', '../data/sent_dev.txt', '../data/sent_test.txt')
-    with open('../data/word_level/vocabulary_origin_all.pkl', 'wb') as vocabulary_pkl:
+    with open('../data/word_level/vocabulary_all.pkl', 'wb') as vocabulary_pkl:
         pickle.dump(vocab, vocabulary_pkl, -1)
         print(len(vocab))
 
