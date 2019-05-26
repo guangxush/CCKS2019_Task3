@@ -5,6 +5,7 @@ from models import models as Models
 from config import Config
 import numpy as np
 import time
+import sys
 
 
 # 获取数据
@@ -32,7 +33,8 @@ def get_data_multi(train_file=None, valid_file=None, test_file=None, flag='train
 
 
 # 创建多任务模型
-def model_select_multi(model_name, x_train, x_train_dis1, x_train_dis2, y_train, y_train2, x_valid, x_valid_dis1, x_valid_dis2, y_valid, y_valid2, x_test, x_test_dis1, x_test_dis2, level, overwrite=False):
+def model_select_multi(model_name, x_train, x_train_dis1, x_train_dis2, y_train, y_train2, x_valid, x_valid_dis1,
+                       x_valid_dis2, y_valid, y_valid2, x_test, x_test_dis1, x_test_dis2, level, overwrite=False):
     config = Config()
     config.level = level
     if level == 'word':
@@ -42,7 +44,7 @@ def model_select_multi(model_name, x_train, x_train_dis1, x_train_dis2, y_train,
     else:
         config.max_len = config.max_len_char
         config.vocab_len = config.vocab_len_char
-    config.exp_name = 'cnn_base'
+    config.exp_name = 'cnn_base_multi'
 
     # 训练的模型保存成文件的形式
     if not os.path.exists(config.checkpoint_dir):
@@ -55,15 +57,16 @@ def model_select_multi(model_name, x_train, x_train_dis1, x_train_dis2, y_train,
 
     # 模型训练
     print('Create the multi task ' + model_name + ' model...')
-    if model_name == 'cnn_base':
+    if model_name == 'cnn_base_multi':
         model.cnn_multi_base()
-    elif model_name == 'bilstm_base':
+    elif model_name == 'bilstm_base_multi':
         model.bilstm_multi_base()
     else:
         return
     if overwrite or not os.path.exists(os.path.join(config.checkpoint_dir, '%s.hdf5' % model_name)):
         print('Start training the multi task ' + model_name + ' model...')
-        model.fit_multi_dis(x_train, x_train_dis1, x_train_dis2, y_train, y_train2, x_valid, x_valid_dis1, x_valid_dis2, y_valid, y_valid2)
+        model.fit_multi_dis(x_train, x_train_dis1, x_train_dis2, y_train, y_train2, x_valid, x_valid_dis1, x_valid_dis2,
+                            y_valid, y_valid2)
     model.load_weight()
     print('Start evaluate the multi task ' + model_name + ' model...')
     y_valid_pred = model.predict_multi(x_valid, x_valid_dis1, x_valid_dis2)
@@ -141,16 +144,31 @@ if __name__ == '__main__':
     fasttext = False
     overwrite = False
     print('Load %s_level data...' % level)
-    x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1, x_valid_dis2, y_valid, x_test, x_test_dis1, x_test_dis2, vocabulary, ids = \
-        get_data(train_file='./data/sent_train_multi.txt', valid_file='./data/sent_dev_multi.txt',
-                 test_file='./data/sent_test_multi.txt', flag='train')
 
-    # cnn base model
-    # y_test_pred = model_select('cnn_base', x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1, x_valid_dis2, y_valid,
-    #                            x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
+    multi_flag = True if sys.argv[1] == 'multi' else False
+    if multi_flag:
+        x_train, x_train_dis1, x_train_dis2, y_train, y_train2, x_valid, x_valid_dis1, x_valid_dis2, y_valid, y_valid2, x_test, x_test_dis1, x_test_dis2, vocabulary, ids = \
+            get_data_multi(train_file='./data/sent_train_multi.txt', valid_file='./data/sent_dev_multi.txt',
+                           test_file='./data/sent_test_multi.txt', flag='train')
 
-    # bilstm model
-    y_test_pred = model_select('bilstm_base', x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1,
-                               x_valid_dis2, y_valid, x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
+        # cnn base model
+        y_test_pred = model_select_multi('cnn_base_multi', x_train, x_train_dis1, x_train_dis2, y_train, y_train2,
+                                         x_valid, x_valid_dis1, x_valid_dis2, y_valid, y_valid2, x_test, x_test_dis1,
+                                         x_test_dis2, level, overwrite=overwrite)
 
-    generate_result(ids, y_test_pred)
+        generate_result(ids, y_test_pred)
+    else:
+        x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1, x_valid_dis2, y_valid, x_test, x_test_dis1, x_test_dis2, vocabulary, ids = \
+            get_data(train_file='./data/sent_train_multi.txt', valid_file='./data/sent_dev_multi.txt',
+                     test_file='./data/sent_test_multi.txt', flag='train')
+
+        # cnn base model
+        # y_test_pred = model_select('cnn_base', x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1,
+        #                            x_valid_dis2, y_valid,
+        #                            x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
+
+        # bilstm model
+        y_test_pred = model_select('bilstm_base', x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1,
+                                   x_valid_dis2, y_valid, x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
+
+        generate_result(ids, y_test_pred)
