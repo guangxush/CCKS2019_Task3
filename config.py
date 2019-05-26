@@ -31,7 +31,7 @@ class Config(object):
         self.vocab_len_char = 88
         self.char_per_word = 10
         self.embedding_path = "modfile"
-        self.embedding_file = 'raw_sst_300_dim_all.'
+        self.embedding_file = 'sst_100_dim_all.'  # 'raw_sst_300_dim_all.'
         self.result_file = './result/result_sent'
         self.score_path = './result/score.md'
         self.embedding_dim = 300
