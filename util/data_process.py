@@ -23,12 +23,12 @@ gold_label = {'entails': 1, 'neutral': 0}
 def generate_embedding(level):
     data_path = '../data/%s_level' % level
     save_model_file = '../modfile/Word2Vec.mod'
-    save_model_name = '../modfile/sst_100_dim_all.embeddings'
-    word_size = 100
+    save_model_name = '../modfile/sst_300_dim_all.embeddings'
+    word_size = 300
 
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
     # 输入的语料是用jieba分好词的文本
-    sentences = word2vec.Text8Corpus(os.path.join(data_path, 'corpus_all.txt'))  # 加载语料
+    sentences = word2vec.Text8Corpus(os.path.join(data_path, 'text.txt'))  # 加载语料
     # 第一个参数是训练语料，第二个参数是小于该数的单词会被剔除，默认值为5, 第三个参数是神经网络的隐藏层单元数，默认为100
     model = word2vec.Word2Vec(sentences, min_count=1, size=word_size, window=5, workers=4)
     model.save(save_model_file)
@@ -46,7 +46,7 @@ def generate_embedding(level):
         if w not in d:
             continue
         emb[i, :] = weights[d[w], :]
-    np.save(open('../modfile/sst_100_dim_all.embeddings', 'wb'), emb)
+    np.save(open('../modfile/sst_300_dim_all.embeddings', 'wb'), emb)
 
 
 # 训练原始语料中的词向量得到embedding
@@ -489,5 +489,5 @@ if __name__ == '__main__':
     # 引入外部数据集
     # build_word_level_vocabulary_from_out_corpus('../raw_data/open_data/text.txt', '../data/word_level/text.txt')
     # 训练词向量
-    # generate_embedding('word')
-    generate_embedding_raw('word')
+    generate_embedding('word')
+    # generate_embedding_raw('word')

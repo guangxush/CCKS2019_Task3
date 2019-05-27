@@ -80,6 +80,43 @@ class Models(object):
         print("Model loaded")
 
     # cnn基本demo
+    def cnn_base_input(self):
+        sentence = Input(shape=(self.config.max_len,), dtype='int32', name='sent_base')
+        dis1 = Input(shape=(self.config.max_len,), dtype='float32', name='disinfos1')
+        dis2 = Input(shape=(self.config.max_len,), dtype='float32', name='disinfos2')
+        weights = np.load(os.path.join(self.config.embedding_path, self.config.embedding_file))
+        embedding_layer = Embedding(input_dim=weights.shape[0],
+                                    output_dim=weights.shape[-1],
+                                    weights=[weights], name='embedding_layer', trainable=False)
+        embedding_dis_layer = Embedding(input_dim=self.config.max_len * 2,
+                                        output_dim=5,
+                                        name='embedding_dis_layer', trainable=True)
+
+        # embedding_dis2_layer = Embedding(input_dim=self.config.max_len * 2,
+        #                                  output_dim=5,
+        #                                  name='embedding_dis2_layer', trainable=True)
+
+        sent_embedding = embedding_layer(sentence)
+        dis1_embedding = embedding_dis_layer(dis1)
+        dis2_emdedding = embedding_dis_layer(dis2)
+        all_input = concatenate([sent_embedding, dis1_embedding, dis2_emdedding], axis=2)
+        filter_length = 3
+        conv_layer = Conv1D(filters=300, kernel_size=filter_length, padding='valid', strides=1, activation='relu')
+        sent_c = conv_layer(all_input)
+        sent_maxpooling = MaxPooling1D(pool_size=self.config.max_len - filter_length + 1)(sent_c)
+        sent_conv = Flatten()(sent_maxpooling)
+        sent_conv = Activation('relu')(sent_conv)
+        sent = Dropout(0.5)(sent_conv)
+        output = Dense(self.config.classes, activation='softmax', name='output')(sent)
+
+        inputs = [sentence, dis1, dis2]
+        self.model = Model(inputs=inputs, outputs=output)
+        self.model.summary()
+        self.model.compile(loss='categorical_crossentropy',
+                           optimizer=self.config.optimizer,
+                           metrics=['acc'])
+
+    # cnn基本demo
     def cnn_base(self):
         sentence = Input(shape=(self.config.max_len,), dtype='int32', name='sent_base')
         dis1 = Input(shape=(self.config.max_len,), dtype='float32', name='disinfos1')
@@ -89,8 +126,8 @@ class Models(object):
                                     output_dim=weights.shape[-1],
                                     weights=[weights], name='embedding_layer', trainable=False)
         embedding_dis1_layer = Embedding(input_dim=self.config.max_len * 2,
-                                         output_dim=5,
-                                         name='embedding_dis1_layer', trainable=True)
+                                        output_dim=5,
+                                        name='embedding_dis1_layer', trainable=True)
 
         embedding_dis2_layer = Embedding(input_dim=self.config.max_len * 2,
                                          output_dim=5,
@@ -111,6 +148,7 @@ class Models(object):
 
         inputs = [sentence, dis1, dis2]
         self.model = Model(inputs=inputs, outputs=output)
+        self.model.summary()
         self.model.compile(loss='categorical_crossentropy',
                            optimizer=self.config.optimizer,
                            metrics=['acc'])
