@@ -80,7 +80,7 @@ class Models(object):
         print("Model loaded")
 
     # cnn基本demo
-    def cnn_base_input(self):
+    def cnn_base(self):
         sentence = Input(shape=(self.config.max_len,), dtype='int32', name='sent_base')
         dis1 = Input(shape=(self.config.max_len,), dtype='float32', name='disinfos1')
         dis2 = Input(shape=(self.config.max_len,), dtype='float32', name='disinfos2')
@@ -117,7 +117,7 @@ class Models(object):
                            metrics=['acc'])
 
     # cnn基本demo
-    def cnn_base(self):
+    def cnn_base_two_dis(self):
         sentence = Input(shape=(self.config.max_len,), dtype='int32', name='sent_base')
         dis1 = Input(shape=(self.config.max_len,), dtype='float32', name='disinfos1')
         dis2 = Input(shape=(self.config.max_len,), dtype='float32', name='disinfos2')
