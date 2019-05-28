@@ -1,7 +1,8 @@
 # -*- encoding:utf-8 -*-
 
 from keras.engine import Input
-from keras.layers import Embedding, Dropout, Conv1D, Dense, Flatten, Activation, MaxPooling1D, concatenate, Bidirectional, LSTM
+from keras.layers import Embedding, Dropout, Conv1D, Dense, Flatten, Activation, MaxPooling1D, concatenate, \
+    Bidirectional, LSTM, SpatialDropout1D, RepeatVector, Permute, BatchNormalization, multiply, Lambda
 from keras.preprocessing.sequence import pad_sequences
 from keras.models import Model
 from models.callbacks import categorical_metrics, categorical_metrics_multi
@@ -92,10 +93,6 @@ class Models(object):
                                         output_dim=5,
                                         name='embedding_dis_layer', trainable=True)
 
-        # embedding_dis2_layer = Embedding(input_dim=self.config.max_len * 2,
-        #                                  output_dim=5,
-        #                                  name='embedding_dis2_layer', trainable=True)
-
         sent_embedding = embedding_layer(sentence)
         dis1_embedding = embedding_dis_layer(dis1)
         dis2_emdedding = embedding_dis_layer(dis2)
@@ -117,6 +114,128 @@ class Models(object):
                            metrics=['acc'])
 
     # cnn基本demo
+    def cnn(self):
+        sentence = Input(shape=(self.config.max_len,), dtype='int32', name='sent_base')
+        dis1 = Input(shape=(self.config.max_len,), dtype='float32', name='disinfos1')
+        dis2 = Input(shape=(self.config.max_len,), dtype='float32', name='disinfos2')
+        weights = np.load(os.path.join(self.config.embedding_path, self.config.embedding_file))
+        embedding_layer = Embedding(input_dim=weights.shape[0],
+                                    output_dim=weights.shape[-1],
+                                    weights=[weights], name='embedding_layer', trainable=False)
+        embedding_dis_layer = Embedding(input_dim=self.config.max_len * 2,
+                                        output_dim=5,
+                                        name='embedding_dis_layer', trainable=True)
+
+        sent_embedding = embedding_layer(sentence)
+        sent_embedding = SpatialDropout1D(0.2)(sent_embedding)
+        dis1_embedding = embedding_dis_layer(dis1)
+        dis2_emdedding = embedding_dis_layer(dis2)
+        all_input = concatenate([sent_embedding, dis1_embedding, dis2_emdedding], axis=2)
+        filter_length = 3
+        conv_layer = Conv1D(filters=300, kernel_size=filter_length, padding='valid', strides=1, activation='relu')
+        sent_c = conv_layer(all_input)
+        sent_maxpooling = MaxPooling1D(pool_size=self.config.max_len - filter_length + 1)(sent_c)
+        sent_conv = Flatten()(sent_maxpooling)
+        sent_conv = Activation('relu')(sent_conv)
+        sent = Dropout(0.5)(sent_conv)
+        mlp_hidden0 = Flatten()(sent)
+        mlp_hidden1 = Dense(128, activation='relu')(mlp_hidden0)
+        mlp_hidden2 = Dense(64, activation='relu')(mlp_hidden1)
+        mlp_hidden2 = Dropout(0.5)(mlp_hidden2)
+        mlp_hidden3 = Dense(32, activation='relu')(mlp_hidden2)
+        output = Dense(self.config.classes, activation='softmax', name='output')(mlp_hidden3)
+
+        inputs = [sentence, dis1, dis2]
+        self.model = Model(inputs=inputs, outputs=output)
+        self.model.summary()
+        self.model.compile(loss='categorical_crossentropy',
+                           optimizer=self.config.optimizer,
+                           metrics=['acc'])
+
+    # mlp基本demo
+    def mlp(self):
+        sentence = Input(shape=(self.config.max_len,), dtype='int32', name='sent_base')
+        dis1 = Input(shape=(self.config.max_len,), dtype='float32', name='disinfos1')
+        dis2 = Input(shape=(self.config.max_len,), dtype='float32', name='disinfos2')
+        weights = np.load(os.path.join(self.config.embedding_path, self.config.embedding_file))
+        embedding_layer = Embedding(input_dim=weights.shape[0],
+                                    output_dim=weights.shape[-1],
+                                    weights=[weights], name='embedding_layer', trainable=False)
+        embedding_dis_layer = Embedding(input_dim=self.config.max_len * 2,
+                                        output_dim=5,
+                                        name='embedding_dis_layer', trainable=True)
+
+        sent_embedding = embedding_layer(sentence)
+        sent_embedding = SpatialDropout1D(0.2)(sent_embedding)
+        dis1_embedding = embedding_dis_layer(dis1)
+        dis2_emdedding = embedding_dis_layer(dis2)
+        all_input = concatenate([sent_embedding, dis1_embedding, dis2_emdedding], axis=2)
+
+        mlp_hidden0 = Flatten()(all_input)
+        mlp_hidden1 = Dense(512, activation='relu')(mlp_hidden0)
+        mlp_hidden2 = Dense(128, activation='relu')(mlp_hidden1)
+        mlp_hidden2 = Dropout(0.5)(mlp_hidden2)
+        mlp_hidden3 = Dense(64, activation='relu')(mlp_hidden2)
+        output = Dense(self.config.classes, activation='softmax', name='output')(mlp_hidden3)
+
+        inputs = [sentence, dis1, dis2]
+        self.model = Model(inputs=inputs, outputs=output)
+        self.model.summary()
+        self.model.compile(loss='categorical_crossentropy',
+                           optimizer=self.config.optimizer,
+                           metrics=['acc'])
+
+    # lstm_attention
+    def lstm_attention(self):
+        sentence = Input(shape=(self.config.max_len,), dtype='int32', name='sent_base')
+        dis1 = Input(shape=(self.config.max_len,), dtype='float32', name='disinfos1')
+        dis2 = Input(shape=(self.config.max_len,), dtype='float32', name='disinfos2')
+        weights = np.load(os.path.join(self.config.embedding_path, self.config.embedding_file))
+        embedding_layer = Embedding(input_dim=weights.shape[0],
+                                    output_dim=weights.shape[-1],
+                                    weights=[weights], name='embedding_layer', trainable=False)
+        embedding_dis_layer = Embedding(input_dim=self.config.max_len * 2,
+                                        output_dim=5,
+                                        name='embedding_dis_layer', trainable=True)
+
+        sent_embedding = embedding_layer(sentence)
+        sent_embedding = SpatialDropout1D(0.2)(sent_embedding)
+        dis1_embedding = embedding_dis_layer(dis1)
+        dis2_emdedding = embedding_dis_layer(dis2)
+        all_input = concatenate([sent_embedding, dis1_embedding, dis2_emdedding], axis=2)
+
+        BiLSTM0 = Bidirectional(LSTM(100, return_sequences=True), merge_mode='concat')(embedding)
+        BiLSTM0 = Dropout(0.5)(BiLSTM0)
+        BiLSTM = Bidirectional(LSTM(100, return_sequences=True), merge_mode='concat')(BiLSTM0)
+        # BiLSTM = BatchNormalization()(BiLSTM)
+        BiLSTM = Dropout(0.5)(BiLSTM)
+
+        attention = Dense(1, activation='tanh')(BiLSTM)
+        attention = Flatten()(attention)
+        attention = Activation('softmax')(attention)
+        attention = RepeatVector(200)(attention)
+        attention = Permute([2, 1])(attention)
+        # apply the attention
+        representation = multiply([BiLSTM, attention])
+        representation = BatchNormalization(axis=1)(representation)
+        # representation = Dropout(0.5)(representation)
+        representation = Lambda(lambda xin: K.sum(xin, axis=1))(representation)
+        representation = Dropout(0.5)(representation)
+
+        # MLP2 - target1
+        # mlp2_hidden0 = Flatten()(representation)
+        mlp2_hidden1 = Dense(128, activation='relu')(representation)
+        mlp2_hidden2 = Dense(64, activation='relu')(mlp2_hidden1)
+        output = Dense(self.config.classes, activation='softmax', name='output')(mlp2_hidden2)
+
+        inputs = [sentence, dis1, dis2]
+        self.model = Model(inputs=inputs, outputs=output)
+        self.model.summary()
+        self.model.compile(loss='categorical_crossentropy',
+                           optimizer=self.config.optimizer,
+                           metrics=['acc'])
+
+    # cnn基本demo
     def cnn_base_two_dis(self):
         sentence = Input(shape=(self.config.max_len,), dtype='int32', name='sent_base')
         dis1 = Input(shape=(self.config.max_len,), dtype='float32', name='disinfos1')
@@ -126,8 +245,8 @@ class Models(object):
                                     output_dim=weights.shape[-1],
                                     weights=[weights], name='embedding_layer', trainable=False)
         embedding_dis1_layer = Embedding(input_dim=self.config.max_len * 2,
-                                        output_dim=5,
-                                        name='embedding_dis1_layer', trainable=True)
+                                         output_dim=5,
+                                         name='embedding_dis1_layer', trainable=True)
 
         embedding_dis2_layer = Embedding(input_dim=self.config.max_len * 2,
                                          output_dim=5,
@@ -382,6 +501,3 @@ class Models(object):
         except ZeroDivisionError:
             f1 = 0.0
         return f1
-
-
-
