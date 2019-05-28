@@ -14,6 +14,7 @@ from keras.utils import to_categorical
 import os
 import numpy as np
 import codecs
+from keras import backend as K
 
 
 class Models(object):
@@ -138,8 +139,7 @@ class Models(object):
         sent_conv = Flatten()(sent_maxpooling)
         sent_conv = Activation('relu')(sent_conv)
         sent = Dropout(0.5)(sent_conv)
-        mlp_hidden0 = Flatten()(sent)
-        mlp_hidden1 = Dense(128, activation='relu')(mlp_hidden0)
+        mlp_hidden1 = Dense(128, activation='relu')(sent)
         mlp_hidden2 = Dense(64, activation='relu')(mlp_hidden1)
         mlp_hidden2 = Dropout(0.5)(mlp_hidden2)
         mlp_hidden3 = Dense(32, activation='relu')(mlp_hidden2)
@@ -171,8 +171,7 @@ class Models(object):
         dis2_emdedding = embedding_dis_layer(dis2)
         all_input = concatenate([sent_embedding, dis1_embedding, dis2_emdedding], axis=2)
 
-        mlp_hidden0 = Flatten()(all_input)
-        mlp_hidden1 = Dense(512, activation='relu')(mlp_hidden0)
+        mlp_hidden1 = Dense(512, activation='relu')(all_input)
         mlp_hidden2 = Dense(128, activation='relu')(mlp_hidden1)
         mlp_hidden2 = Dropout(0.5)(mlp_hidden2)
         mlp_hidden3 = Dense(64, activation='relu')(mlp_hidden2)
@@ -204,7 +203,7 @@ class Models(object):
         dis2_emdedding = embedding_dis_layer(dis2)
         all_input = concatenate([sent_embedding, dis1_embedding, dis2_emdedding], axis=2)
 
-        BiLSTM0 = Bidirectional(LSTM(100, return_sequences=True), merge_mode='concat')(embedding)
+        BiLSTM0 = Bidirectional(LSTM(100, return_sequences=True), merge_mode='concat')(all_input)
         BiLSTM0 = Dropout(0.5)(BiLSTM0)
         BiLSTM = Bidirectional(LSTM(100, return_sequences=True), merge_mode='concat')(BiLSTM0)
         # BiLSTM = BatchNormalization()(BiLSTM)
