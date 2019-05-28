@@ -171,6 +171,7 @@ class Models(object):
         dis2_emdedding = embedding_dis_layer(dis2)
         all_input = concatenate([sent_embedding, dis1_embedding, dis2_emdedding], axis=2)
 
+        all_input = Flatten()(all_input)
         mlp_hidden1 = Dense(512, activation='relu')(all_input)
         mlp_hidden2 = Dense(128, activation='relu')(mlp_hidden1)
         mlp_hidden2 = Dropout(0.5)(mlp_hidden2)

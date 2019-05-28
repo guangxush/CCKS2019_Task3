@@ -181,11 +181,11 @@ if __name__ == '__main__':
         # y_test_pred = model_select('bilstm_base', x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1,
         #                            x_valid_dis2, y_valid, x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
 
-        y_test_pred = model_select('cnn', x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1,
-                                   x_valid_dis2, y_valid,
-                                   x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
-
-        generate_result(ids, y_test_pred)
+        # y_test_pred = model_select('cnn', x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1,
+        #                            x_valid_dis2, y_valid,
+        #                            x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
+        #
+        # generate_result(ids, y_test_pred)
 
         y_test_pred = model_select('mlp', x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1,
                                    x_valid_dis2, y_valid,
