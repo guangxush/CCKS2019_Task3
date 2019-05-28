@@ -12,7 +12,7 @@ class Config(object):
         self.embedding_path_char = None
         self.max_len = None
         self.vocab_len = None
-        self.num_epochs = 30  # 100
+        self.num_epochs = 50  # 100
         self.learning_rate = 0.001
         self.optimizer = "adam"
         self.batch_size = 128
