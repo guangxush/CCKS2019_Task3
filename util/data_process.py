@@ -12,6 +12,7 @@ import random
 import logging
 import json
 from tqdm import tqdm
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 random.seed(42)
 
@@ -360,6 +361,59 @@ def load_data(raw_file, level):
         print('char_max_len:', max_len)
         print('char_avg_len:', float(avg_len) / len(vocabulary))
         return ids, x, disinfos1, disinfos2, vocabulary
+
+
+# 加载tf_idf数据
+def load_tf_idf_data(raw_file, level):
+    # 字符级别的训练集和验证集
+    if level == 'word':
+        x = list()  # 句子输入
+        y = list()  # 预测标签的输出
+        with codecs.open(raw_file, encoding='utf-8') as f_train:
+            lines = f_train.readlines()
+            print(lines[0])
+            for line in tqdm(lines):
+                json_data = json.loads(line)
+                input = json_data['sent']
+                label = json_data['label']
+                # 31 4这种标签单独处理
+                if len(label.split(' ')) > 1:
+                    label = label.split(' ')[0]
+
+                x.append(input)
+                y.append(float(label))
+
+        vectorizer = TfidfVectorizer(stop_words=stopwords,
+                                     analyzer='word',
+                                     min_df=5,
+                                     token_pattern=r"(?u)\b\w+\b")
+        tfidf = vectorizer.fit_transform(x)
+        weight = tfidf.toarray()
+        return weight, y
+
+    # 测试集数据加载
+    elif level == 'test':
+        x = list()  # 句子输入
+        ids = list()
+        max_len = 0
+        with codecs.open(raw_file, encoding='utf-8') as f_train:
+            lines = f_train.readlines()
+            print(lines[0])
+            for line in tqdm(lines):
+                json_data = json.loads(line)
+                input = json_data['sent']
+
+                x.append(input)
+
+                if len(x[-1]) > max_len:
+                    max_len = len(x[-1])
+        vectorizer = TfidfVectorizer(stop_words=stopwords,
+                                     analyzer='word',
+                                     min_df=5,
+                                     token_pattern=r"(?u)\b\w+\b")
+        tfidf = vectorizer.fit_transform(x)
+        weight = tfidf.toarray()
+        return ids, weight
 
 
 # 根据不同的文件类型加载数据

@@ -1,6 +1,6 @@
 # -*- encoding:utf-8 -*-
 import os
-from util.data_process import load_data, load_data_multi_dis
+from util.data_process import load_data, load_data_multi_dis, load_tf_idf_data
 from models import models as Models
 from config import Config
 import numpy as np
@@ -18,6 +18,18 @@ def get_data(train_file=None, valid_file=None, test_file=None, flag='train'):
     elif flag == 'test':
         ids, x_test, disinfos1, disinfos2, vocabulary = load_data(test_file, 'test')
         return x_test, disinfos1, disinfos2, vocabulary, ids
+
+
+# 获取数据
+def get_tf_idf_data(train_file=None, valid_file=None, test_file=None, flag='train'):
+    if flag == 'train':
+        x_train, y_train = load_tf_idf_data(train_file, 'word')
+        x_valid, y_valid = load_tf_idf_data(valid_file, 'word')
+        ids, x_test = load_tf_idf_data(test_file, 'test')
+        return x_train, y_train, x_valid, y_valid, x_test, ids
+    elif flag == 'test':
+        ids, x_test = load_tf_idf_data(test_file, 'test')
+        return x_test, ids
 
 
 # 多任务获取数据
@@ -128,8 +140,7 @@ def model_select(model_name, x_train, x_train_dis1, x_train_dis2, y_train, x_val
     return y_test_pred
 
 
-def tree_mode(model_name, x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1, x_valid_dis2, y_valid,
-              x_test, x_test_dis1, x_test_dis2, level, overwrite=False):
+def tree_mode(model_name, x_train, y_train, x_valid, y_valid, x_test, level):
     config = Config()
     config.level = level
     if level == 'word':
@@ -158,9 +169,7 @@ def tree_mode(model_name, x_train, x_train_dis1, x_train_dis2, y_train, x_valid,
         return
 
     print('Start evaluate the ' + model_name + ' model...')
-    x_valid = model.pad(x_valid)
     y_valid_pred = xgb_model.predict(x_valid).reshape(-1, 1)
-    x_test = model.pad(x_test)
     y_test_pred = xgb_model.predict(x_test).reshape(-1, 1)
     model.evaluate(model_name, y_valid_pred, y_valid)
     print('Start generate the ' + model_name + ' model...')
@@ -191,8 +200,8 @@ if __name__ == '__main__':
     overwrite = False
     print('Load %s_level data...' % level)
 
-    multi_flag = True if sys.argv[1] == 'multi' else False
-    if multi_flag:
+    multi_flag = sys.argv[1]
+    if multi_flag == 'multi':
         x_train, x_train_dis1, x_train_dis2, y_train, y_train2, x_valid, x_valid_dis1, x_valid_dis2, y_valid, y_valid2, x_test, x_test_dis1, x_test_dis2, vocabulary, ids = \
             get_data_multi(train_file='./data/sent_train_multi.txt', valid_file='./data/sent_dev_multi.txt',
                            test_file='./data/sent_test_multi.txt', flag='train')
@@ -207,7 +216,7 @@ if __name__ == '__main__':
                                          x_test_dis2, level, overwrite=overwrite)
 
         generate_result(ids, y_test_pred)
-    else:
+    elif multi_flag == 'single':
         x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1, x_valid_dis2, y_valid, x_test, x_test_dis1, x_test_dis2, vocabulary, ids = \
             get_data(train_file='./data/sent_train_multi.txt', valid_file='./data/sent_dev_multi.txt',
                      test_file='./data/sent_test_multi.txt', flag='train')
@@ -232,17 +241,18 @@ if __name__ == '__main__':
         #                            x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
         #
         # generate_result(ids, y_test_pred)
-        #
-        # y_test_pred = model_select('lstm_attention', x_train, x_train_dis1, x_train_dis2, y_train, x_valid,
-        #                            x_valid_dis1,
-        #                            x_valid_dis2, y_valid,
-        #                            x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
-        #
-        # generate_result(ids, y_test_pred)
 
-        y_test_pred = tree_mode('xgboost', x_train, x_train_dis1, x_train_dis2, y_train, x_valid,
-                                x_valid_dis1,
-                                x_valid_dis2, y_valid,
-                                x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
+        y_test_pred = model_select('lstm_attention', x_train, x_train_dis1, x_train_dis2, y_train, x_valid,
+                                   x_valid_dis1,
+                                   x_valid_dis2, y_valid,
+                                   x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
+
+        generate_result(ids, y_test_pred)
+
+    elif multi_flag == 'tfidf':
+
+        x_train, y_train, x_valid, y_valid, x_test, ids = get_tf_idf_data(train_file='./data/sent_train_multi.txt', valid_file='./data/sent_dev_multi.txt', test_file='./data/sent_test_multi.txt', flag='train')
+
+        y_test_pred = tree_mode('xgboost', x_train, y_train, x_valid, y_valid, x_test, level)
 
         generate_result(ids, y_test_pred)

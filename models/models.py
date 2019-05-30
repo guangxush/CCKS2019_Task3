@@ -10,7 +10,7 @@ from keras.callbacks import ModelCheckpoint, EarlyStopping, CSVLogger
 
 from sklearn.metrics import precision_score, recall_score, accuracy_score
 from keras.utils import to_categorical
-from xgboost import XGBRegressor
+from xgboost import XGBClassifier
 from xgboost import plot_importance
 from matplotlib import pyplot
 
@@ -458,28 +458,16 @@ class Models(object):
                        class_weight=['balanced', 'balanced'])
 
     def xgboost(self, x_train, y_train, x_valid, y_valid):
-        x_train = self.pad(x_train)
 
-        # 结果集one-hot，不能直接使用数字作为标签
-        # y_train = to_categorical(y_train)
-        y_train = np.asarray(y_train)
-
-        x_valid = self.pad(x_valid)
-
-        # 结果集one-hot，不能直接使用数字作为标签
-        # y_valid = to_categorical(y_valid)
-        y_valid = np.asarray(y_valid)
-
-        xgb_model = XGBRegressor()
+        xgb_model = XGBClassifier(max_depth=6, learning_rate=0.2, n_estimators=160, slient=0, objective='multi:softmax',
+                          nthread=-1, min_child_weight=3, subsample=0.85, gamma=0.1, colsample_bytree=0.8,
+                          reg_lambda=1, seed=1000, n_jobs=10)
 
         eval_set = [(x_valid, y_valid)]
-        xgb_model.fit(x_train, y_train,
-                      early_stopping_rounds=3,
-                      eval_metric='mae',
-                      eval_set=eval_set,
-                      verbose=True)
+        xgb_model.fit(x_train, y_train, eval_set=eval_set, eval_metric='merror', verbose=True, early_stopping_rounds=10)
         plot_importance(xgb_model)
         pyplot.show()
+        xgb_model.save_model('./modfile/tf_idf_XGBoost.model')
         return xgb_model, x_valid, y_valid
 
     def predict(self, x, x_dis1, x_dis2):
