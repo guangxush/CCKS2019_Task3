@@ -10,6 +10,9 @@ from keras.callbacks import ModelCheckpoint, EarlyStopping, CSVLogger
 
 from sklearn.metrics import precision_score, recall_score, accuracy_score
 from keras.utils import to_categorical
+from xgboost import XGBRegressor
+from xgboost import plot_importance
+from matplotlib import pyplot
 
 import os
 import numpy as np
@@ -453,6 +456,19 @@ class Models(object):
                        callbacks=self.callbacks,
                        # 平衡一下0数据的权重
                        class_weight=['balanced', 'balanced'])
+
+    def xgboost(self, x_train, y_train, x_dev, y_dev):
+        xgb_model = XGBRegressor()
+
+        eval_set = [(x_dev, y_dev)]
+        xgb_model.fit(x_train, y_train,
+                      early_stopping_rounds=3,
+                      eval_metric='mae',
+                      eval_set=eval_set,
+                      verbose=True)
+        plot_importance(xgb_model)
+        pyplot.show()
+        return xgb_model
 
     def predict(self, x, x_dis1, x_dis2):
         x = self.pad(x)

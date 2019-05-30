@@ -128,6 +128,44 @@ def model_select(model_name, x_train, x_train_dis1, x_train_dis2, y_train, x_val
     return y_test_pred
 
 
+def tree_mode(model_name, x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1, x_valid_dis2, y_valid,
+              x_test, x_test_dis1, x_test_dis2, level, overwrite=False):
+    config = Config()
+    config.level = level
+    if level == 'word':
+        # 固定最大长度，多余的截取掉，不足的用0填充
+        config.max_len = config.max_len_word
+        config.vocab_len = config.vocab_len_word
+    else:
+        config.max_len = config.max_len_char
+        config.vocab_len = config.vocab_len_char
+    config.exp_name = model_name
+
+    # 训练的模型保存成文件的形式
+    if not os.path.exists(config.checkpoint_dir):
+        os.makedirs(config.checkpoint_dir)
+
+    # 获取词向量文件
+    config.embedding_file += 'embeddings'
+    # 载入配置文件
+    model = Models.Models(config)
+
+    # 模型训练
+    print('Create the ' + model_name + ' model...')
+    if model_name == 'xgboost':
+        xgb_model = model.xgboost(x_train, y_train, x_valid, y_valid)
+    else:
+        return
+
+    print('Start evaluate the ' + model_name + ' model...')
+    y_valid_pred = xgb_model.predict(x_valid).reshape(-1, 1)
+    y_test_pred = xgb_model.predict(x_test).reshape(-1, 1)
+    model.evaluate(model_name, y_valid_pred, y_valid)
+    print('Start generate the ' + model_name + ' model...')
+
+    return y_test_pred
+
+
 # 生成预测结果
 def generate_result(ids, y_test_pred):
     config = Config()
@@ -187,14 +225,22 @@ if __name__ == '__main__':
         #
         # generate_result(ids, y_test_pred)
 
-        y_test_pred = model_select('mlp', x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1,
-                                   x_valid_dis2, y_valid,
-                                   x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
+        # y_test_pred = model_select('mlp', x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1,
+        #                            x_valid_dis2, y_valid,
+        #                            x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
+        #
+        # generate_result(ids, y_test_pred)
+        #
+        # y_test_pred = model_select('lstm_attention', x_train, x_train_dis1, x_train_dis2, y_train, x_valid,
+        #                            x_valid_dis1,
+        #                            x_valid_dis2, y_valid,
+        #                            x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
+        #
+        # generate_result(ids, y_test_pred)
 
-        generate_result(ids, y_test_pred)
-
-        y_test_pred = model_select('lstm_attention', x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1,
-                                   x_valid_dis2, y_valid,
-                                   x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
+        y_test_pred = tree_mode('xgboost', x_train, x_train_dis1, x_train_dis2, y_train, x_valid,
+                                x_valid_dis1,
+                                x_valid_dis2, y_valid,
+                                x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
 
         generate_result(ids, y_test_pred)
