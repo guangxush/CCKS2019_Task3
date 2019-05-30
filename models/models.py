@@ -478,7 +478,7 @@ class Models(object):
                       verbose=True)
         plot_importance(xgb_model)
         pyplot.show()
-        return xgb_model
+        return xgb_model, x_valid, y_valid
 
     def predict(self, x, x_dis1, x_dis2):
         x = self.pad(x)

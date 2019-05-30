@@ -153,7 +153,7 @@ def tree_mode(model_name, x_train, x_train_dis1, x_train_dis2, y_train, x_valid,
     # 模型训练
     print('Create the ' + model_name + ' model...')
     if model_name == 'xgboost':
-        xgb_model = model.xgboost(x_train, y_train, x_valid, y_valid)
+        xgb_model, x_valid, y_valid = model.xgboost(x_train, y_train, x_valid, y_valid)
     else:
         return
 
