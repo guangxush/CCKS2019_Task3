@@ -461,12 +461,14 @@ class Models(object):
         x_train = self.pad(x_train)
 
         # 结果集one-hot，不能直接使用数字作为标签
-        y_train = to_categorical(y_train)
+        # y_train = to_categorical(y_train)
+        y_train = np.asarray(y_train)
 
         x_valid = self.pad(x_valid)
 
         # 结果集one-hot，不能直接使用数字作为标签
-        y_valid = to_categorical(y_valid)
+        # y_valid = to_categorical(y_valid)
+        y_valid = np.asarray(y_valid)
 
         xgb_model = XGBRegressor()
 

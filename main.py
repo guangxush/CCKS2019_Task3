@@ -158,7 +158,9 @@ def tree_mode(model_name, x_train, x_train_dis1, x_train_dis2, y_train, x_valid,
         return
 
     print('Start evaluate the ' + model_name + ' model...')
+    x_valid = np.asarray(x_valid)
     y_valid_pred = xgb_model.predict(x_valid).reshape(-1, 1)
+    x_test = np.asarray(x_test)
     y_test_pred = xgb_model.predict(x_test).reshape(-1, 1)
     model.evaluate(model_name, y_valid_pred, y_valid)
     print('Start generate the ' + model_name + ' model...')
