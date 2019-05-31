@@ -459,9 +459,8 @@ class Models(object):
 
     def xgboost(self, x_train, y_train, x_valid, y_valid):
 
-        xgb_model = XGBClassifier(max_depth=6, learning_rate=0.2, n_estimators=160, slient=0, objective='multi:softmax',
-                                  nthread=-1, min_child_weight=3, subsample=0.85, gamma=0.1, colsample_bytree=0.8,
-                                  reg_lambda=1, seed=1000, n_jobs=10, verbose=2)
+        xgb_model = XGBClassifier(objective='multi:softmax',
+                                  verbose=2)
 
         eval_set = [(x_valid, y_valid)]
         xgb_model.fit(x_train, y_train, eval_set=eval_set, eval_metric='merror', verbose=True, early_stopping_rounds=10)
