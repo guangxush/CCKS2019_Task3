@@ -252,7 +252,7 @@ def write_results(ids, results_cv):
     results_cv = np.asarray(results_cv)
     results_cv = results_cv.T
     for result in results_cv:
-        d = np.argmax(np.bincount(result))
+        d = np.argmax(np.bincount(result.reshape(len(result))))
         y_test_pred.append(d)
     generate_result(ids, y_test_pred)
     return
