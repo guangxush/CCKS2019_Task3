@@ -248,13 +248,10 @@ def generate_result(ids, y_test_pred):
 
 
 def write_results(ids, results_cv):
-    y_test_pred = []
     results_cv = np.asarray(results_cv)
-    results_cv = results_cv.T
-    for result in results_cv:
-        d = np.argmax(np.bincount(result.reshape(len(result))))
-        y_test_pred.append(d)
-    generate_result(ids, y_test_pred)
+    results_cv = np.mean(results_cv, axis=0)
+    # y_test_pred = [np.argmax(y) for y in results_cv]
+    generate_result(ids, results_cv)
     return
 
 
