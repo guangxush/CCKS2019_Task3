@@ -331,8 +331,8 @@ if __name__ == '__main__':
         for i in range(10):
             x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1, x_valid_dis2, y_valid, x_test, x_test_dis1, x_test_dis2, vocabulary, ids = \
                 get_data(train_file='./data/fold/sent_train' + str(i) + '.txt',
-                         valid_file='./data/fold/sent_dev_multi.txt',
-                         test_file='./data/fold/sent_test_multi.txt',
+                         valid_file='./data/sent_dev_multi.txt',
+                         test_file='./data/sent_test_multi.txt',
                          flag='train')
             ids_ = ids
 
