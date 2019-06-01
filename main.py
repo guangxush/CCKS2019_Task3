@@ -26,7 +26,7 @@ def get_tf_idf_data(train_file=None, valid_file=None, test_file=None, flag='trai
         x_train, y_train = load_tf_idf_data(train_file, 'word')
         x_valid, y_valid = load_tf_idf_data(valid_file, 'word')
         ids, x_test = load_tf_idf_data(test_file, 'test')
-        return x_train, y_train, x_valid, y_valid, x_test, ids
+        return x_train[200000:], y_train[200000:], x_valid, y_valid, x_test, ids
     elif flag == 'test':
         ids, x_test = load_tf_idf_data(test_file, 'test')
         return x_test, ids
