@@ -21,15 +21,11 @@ def get_data(train_file=None, valid_file=None, test_file=None, flag='train'):
 
 
 # 获取数据
-def get_tf_idf_data(train_file=None, valid_file=None, test_file=None, flag='train'):
-    if flag == 'train':
-        x_train, y_train = load_tf_idf_data(train_file, 'word')
-        x_valid, y_valid = load_tf_idf_data(valid_file, 'word')
-        ids, x_test = load_tf_idf_data(test_file, 'test')
-        return x_train, y_train, x_valid, y_valid, x_test, ids
-    elif flag == 'test':
-        ids, x_test = load_tf_idf_data(test_file, 'test')
-        return x_test, ids
+def get_tf_idf_data(train_file=None, valid_file=None, test_file=None):
+    xgb_train = load_tf_idf_data(train_file, 'word')
+    xgb_valid = load_tf_idf_data(valid_file, 'word')
+    ids, xgb_test = load_tf_idf_data(test_file, 'test')
+    return xgb_train, xgb_valid, xgb_test, ids
 
 
 # 多任务获取数据
@@ -140,7 +136,7 @@ def model_select(model_name, x_train, x_train_dis1, x_train_dis2, y_train, x_val
     return y_test_pred
 
 
-def tree_mode(model_name, x_train, y_train, x_valid, y_valid, x_test, level):
+def tree_mode(model_name, xgb_train, xgb_valid, xgb_test, level):
     config = Config()
     config.level = level
     if level == 'word':
@@ -164,13 +160,13 @@ def tree_mode(model_name, x_train, y_train, x_valid, y_valid, x_test, level):
     # 模型训练
     print('Create the ' + model_name + ' model...')
     if model_name == 'xgboost':
-        xgb_model, x_valid, y_valid = model.xgboost(x_train, y_train, x_valid, y_valid)
+        xgb_model = model.xgboost(xgb_train, xgb_valid)
     else:
         return
 
     print('Start evaluate the ' + model_name + ' model...')
-    y_valid_pred = xgb_model.predict(x_valid).reshape(-1, 1)
-    y_test_pred = xgb_model.predict(x_test).reshape(-1, 1)
+    y_valid_pred = xgb_model.predict(xgb_valid).reshape(-1, 1)
+    y_test_pred = xgb_model.predict(xgb_test).reshape(-1, 1)
     model.evaluate(model_name, y_valid_pred, y_valid)
     print('Start generate the ' + model_name + ' model...')
 
@@ -251,8 +247,8 @@ if __name__ == '__main__':
 
     elif multi_flag == 'tfidf':
 
-        x_train, y_train, x_valid, y_valid, x_test, ids = get_tf_idf_data(train_file='./data/sent_train_multi.txt', valid_file='./data/sent_dev_multi.txt', test_file='./data/sent_test_multi.txt', flag='train')
+        xgb_train, xgb_valid, xgb_test, ids = get_tf_idf_data(train_file='./data/sent_train_multi.txt', valid_file='./data/sent_dev_multi.txt', test_file='./data/sent_test_multi.txt')
 
-        y_test_pred = tree_mode('xgboost', x_train, y_train, x_valid, y_valid, x_test, level)
+        y_test_pred = tree_mode('xgboost', xgb_train, xgb_valid, xgb_test, level)
 
         generate_result(ids, y_test_pred)

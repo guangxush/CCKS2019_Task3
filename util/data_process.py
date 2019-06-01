@@ -13,6 +13,7 @@ import logging
 import json
 from tqdm import tqdm
 from sklearn.feature_extraction.text import TfidfVectorizer
+import xgboost as xgb
 
 random.seed(42)
 
@@ -389,7 +390,8 @@ def load_tf_idf_data(raw_file, level):
                                      token_pattern=r"(?u)\b\w+\b")
         tfidf = vectorizer.fit_transform(x)
         weight = tfidf.toarray()
-        return weight, y
+        xgb_data = xgb.DMatrix(weight, label=y)
+        return xgb_data
 
     # 测试集数据加载
     elif level == 'test':
@@ -413,7 +415,8 @@ def load_tf_idf_data(raw_file, level):
                                      token_pattern=r"(?u)\b\w+\b")
         tfidf = vectorizer.fit_transform(x)
         weight = tfidf.toarray()
-        return ids, weight
+        xgb_data = xgb.DMatrix(weight)
+        return xgb_data
 
 
 # 根据不同的文件类型加载数据
