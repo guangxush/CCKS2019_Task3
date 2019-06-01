@@ -458,34 +458,17 @@ class Models(object):
                        # 平衡一下0数据的权重
                        class_weight=['balanced', 'balanced'])
 
-    def xgboost(self, xgb_train, xgb_valid):
+    def xgboost(self, x_train, y_train, x_valid, y_valid):
 
-        # xgb_model = XGBClassifier(max_depth=6, learning_rate=0.2, n_estimators=160, slient=0, objective='multi:softmax',
-        #                       nthread=-1, min_child_weight=3, subsample=0.85, gamma=0.1, colsample_bytree=0.8,
-        #                       reg_lambda=1, seed=1000, n_jobs=10, verbose=2)
-        #
-        # eval_set = [(x_valid, y_valid)]
-        # xgb_model.fit(x_train, y_train, eval_set=eval_set, eval_metric='merror', verbose=True, early_stopping_rounds=10)
-        # print("train xgboost finished!")
-        # plot_importance(xgb_model)
-        # pyplot.show()
-        # xgb_model.save_model('./modfile/tf_idf_XGBoost.model')
-        # return xgb_model
-        # setup parameters for xgboost
-        param = {}
-        # use softmax multi-class classification
-        param['objective'] = 'multi:softmax'
-        # scale weight of positive examples
-        param['eta'] = 0.1
-        param['max_depth'] = 6
-        param['silent'] = 1
-        param['nthread'] = 4
-        param['num_class'] = 6
+        xgb_model = XGBClassifier(objective='multi:softmax',
+                                  verbose=2)
 
-        watchlist = [(xgb_train, 'train'), (xgb_valid, 'test')]
-        num_round = 5
-        xgb_model = xgb.train(param, xgb_train, num_round, watchlist)
-        return xgb_model
+        eval_set = [(x_valid, y_valid)]
+        xgb_model.fit(x_train, y_train, eval_set=eval_set, eval_metric='merror', verbose=True, early_stopping_rounds=10)
+        plot_importance(xgb_model)
+        pyplot.show()
+        xgb_model.save_model('./modfile/tf_idf_XGBoost.model')
+        return xgb_model, x_valid, y_valid
 
     def predict(self, x, x_dis1, x_dis2):
         x = self.pad(x)
