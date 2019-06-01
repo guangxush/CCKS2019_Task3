@@ -390,8 +390,7 @@ def load_tf_idf_data(raw_file, level):
                                      token_pattern=r"(?u)\b\w+\b")
         tfidf = vectorizer.fit_transform(x)
         weight = tfidf.toarray()
-        xgb_data = xgb.DMatrix(weight, label=y)
-        return xgb_data
+        return weight, y
 
     # 测试集数据加载
     elif level == 'test':
@@ -415,8 +414,7 @@ def load_tf_idf_data(raw_file, level):
                                      token_pattern=r"(?u)\b\w+\b")
         tfidf = vectorizer.fit_transform(x)
         weight = tfidf.toarray()
-        xgb_data = xgb.DMatrix(weight)
-        return xgb_data
+        return ids, weight
 
 
 # 根据不同的文件类型加载数据
