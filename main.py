@@ -153,7 +153,7 @@ def model_fold_select(model_name, x_train, x_train_dis1, x_train_dis2, y_train, 
     else:
         config.max_len = config.max_len_char
         config.vocab_len = config.vocab_len_char
-    config.exp_name = model_name
+    config.exp_name = model_name + '_' + str(fold)
 
     # 训练的模型保存成文件的形式
     if not os.path.exists(config.checkpoint_dir):
