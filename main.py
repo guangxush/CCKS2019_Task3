@@ -20,6 +20,18 @@ def get_data(train_file=None, valid_file=None, test_file=None, flag='train'):
         return x_test, disinfos1, disinfos2, vocabulary, ids
 
 
+# 获取包级别的数据
+def get_bag_data(train_file=None, valid_file=None, test_file=None, flag='train'):
+    if flag == 'train':
+        x_train, x_train_dis1, x_train_dis2, y_train, vocabulary = load_data(train_file, 'word')
+        x_valid, x_valid_dis1, x_valid_dis2, y_valid, vocabulary = load_data(valid_file, 'word')
+        ids, x_test, x_test_dis1, x_test_dis2, vocabulary = load_data(test_file, 'test')
+        return x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1, x_valid_dis2, y_valid, x_test, x_test_dis1, x_test_dis2, vocabulary, ids
+    elif flag == 'test':
+        ids, x_test, disinfos1, disinfos2, vocabulary = load_data(test_file, 'test')
+        return x_test, disinfos1, disinfos2, vocabulary, ids
+
+
 # 获取数据
 def get_tf_idf_data(train_file=None, valid_file=None, test_file=None, flag='train'):
     if flag == 'train':
@@ -200,8 +212,8 @@ if __name__ == '__main__':
     overwrite = False
     print('Load %s_level data...' % level)
 
-    multi_flag = sys.argv[1]
-    if multi_flag == 'multi':
+    flag = sys.argv[1]
+    if flag == 'multi':
         x_train, x_train_dis1, x_train_dis2, y_train, y_train2, x_valid, x_valid_dis1, x_valid_dis2, y_valid, y_valid2, x_test, x_test_dis1, x_test_dis2, vocabulary, ids = \
             get_data_multi(train_file='./data/sent_train_multi.txt', valid_file='./data/sent_dev_multi.txt',
                            test_file='./data/sent_test_multi.txt', flag='train')
@@ -216,15 +228,15 @@ if __name__ == '__main__':
                                          x_test_dis2, level, overwrite=overwrite)
 
         generate_result(ids, y_test_pred)
-    elif multi_flag == 'single':
+    elif flag == 'single':
         x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1, x_valid_dis2, y_valid, x_test, x_test_dis1, x_test_dis2, vocabulary, ids = \
-            get_data(train_file='./data/sent_train_multi.txt', valid_file='./data/sent_dev_multi.txt',
-                     test_file='./data/sent_test_multi.txt', flag='train')
+            get_data(train_file='./data/sent_train.txt', valid_file='./data/sent_dev.txt',
+                     test_file='./data/sent_test.txt', flag='train')
 
         # cnn base model
-        # y_test_pred = model_select('cnn_base', x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1,
-        #                            x_valid_dis2, y_valid,
-        #                            x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
+        y_test_pred = model_select('cnn_base', x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1,
+                                   x_valid_dis2, y_valid,
+                                   x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
 
         # bilstm model
         # y_test_pred = model_select('bilstm_base', x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1,
@@ -242,17 +254,29 @@ if __name__ == '__main__':
         #
         # generate_result(ids, y_test_pred)
 
-        y_test_pred = model_select('lstm_attention', x_train, x_train_dis1, x_train_dis2, y_train, x_valid,
-                                   x_valid_dis1,
-                                   x_valid_dis2, y_valid,
-                                   x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
+        # y_test_pred = model_select('lstm_attention', x_train, x_train_dis1, x_train_dis2, y_train, x_valid,
+        #                            x_valid_dis1,
+        #                            x_valid_dis2, y_valid,
+        #                            x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
 
         generate_result(ids, y_test_pred)
 
-    elif multi_flag == 'tfidf':
+    elif flag == 'tfidf':
 
         x_train, y_train, x_valid, y_valid, x_test, ids = get_tf_idf_data(train_file='./data/sent_train_multi.txt', valid_file='./data/sent_dev_multi.txt', test_file='./data/sent_test_multi.txt', flag='train')
 
         y_test_pred = tree_mode('xgboost', x_train, y_train, x_valid, y_valid, x_test, level)
 
         generate_result(ids, y_test_pred)
+
+    elif flag == 'bag':
+
+        x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1, x_valid_dis2, y_valid, x_test, x_test_dis1, x_test_dis2, vocabulary, ids = \
+            get_bag_data(train_file='./data/bag_train.txt', valid_file='./data/bag_dev.txt',
+                         test_file='./data/bag_test.txt', flag='train')
+
+        # cnn base model
+        y_test_pred = model_select('cnn_base', x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1,
+                                   x_valid_dis2, y_valid,
+                                   x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
+
