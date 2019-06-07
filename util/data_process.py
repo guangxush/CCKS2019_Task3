@@ -13,7 +13,6 @@ import logging
 import json
 from tqdm import tqdm
 from sklearn.feature_extraction.text import TfidfVectorizer
-import xgboost as xgb
 
 random.seed(42)
 
@@ -33,22 +32,19 @@ def generate_embedding(level):
     sentences = word2vec.Text8Corpus(os.path.join(data_path, 'text.txt'))  # 加载语料
     # 第一个参数是训练语料，第二个参数是小于该数的单词会被剔除，默认值为5, 第三个参数是神经网络的隐藏层单元数，默认为100
     model = word2vec.Word2Vec(sentences, min_count=1, size=word_size, window=5, workers=4)
-    model.save(save_model_file)
-    model.wv.save_word2vec_format(save_model_name, binary=False)  # 以二进制类型保存模型以便重用
-
     vocab = pickle.load(open(os.path.join(data_path, 'vocabulary_all.pkl'), 'rb'))
     weights = model.wv.syn0
     # 得到词向量字典
     d = dict([(k, v.index) for k, v in model.wv.vocab.items()])
     emb = np.zeros(shape=(len(vocab) + 2, word_size), dtype='float32')
-    model.save('../modfile/Word2Vec.mod')
-    model.wv.save_word2vec_format('../modfile/Word2Vec.mod', binary=False)
+    model.save(save_model_file)
+    model.wv.save_word2vec_format(save_model_file, binary=False)
     # vocab 形式： {word : index}
     for w, i in vocab.items():
         if w not in d:
             continue
         emb[i, :] = weights[d[w], :]
-    np.save(open('../modfile/sst_300_dim_all.embeddings', 'wb'), emb)
+    np.save(open(save_model_name, 'wb'), emb)
 
 
 # 训练原始语料中的词向量得到embedding
