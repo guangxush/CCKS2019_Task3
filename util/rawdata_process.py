@@ -42,7 +42,7 @@ def generate_json_bag_data(sent_file, label_file, out_file, flag):
                 sent_set = ""
                 sent_list = line_label[-2].split(' ')
                 for sent in sent_list:
-                    sent_set += sent_dict[sent] + "@@@"
+                    sent_set += sent_dict[sent] + " @@@ "
                 json_dict = {'id': line_label[0], 'per1': line_label[1], 'per2': line_label[2], 'sent': sent_set[:-3],
                              'label': line_label[-1]}
                 fj = json.dumps(json_dict, ensure_ascii=False)
@@ -60,7 +60,7 @@ def generate_json_bag_data(sent_file, label_file, out_file, flag):
                 sent_set = ""
                 sent_list = line_label[-1].split(' ')
                 for sent in sent_list:
-                    sent_set += sent_dict[sent] + "@@@"
+                    sent_set += sent_dict[sent] + " @@@ "
                 json_dict = {'id': line_label[0], 'per1': line_label[1], 'per2': line_label[2], 'sent': sent_set[:-3]}
                 fj = json.dumps(json_dict, ensure_ascii=False)
                 fw.write(fj + '\n')
