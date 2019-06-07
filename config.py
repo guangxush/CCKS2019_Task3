@@ -27,7 +27,9 @@ class Config(object):
         self.early_stopping_mode = 'max'
         self.max_len_word = 60
         self.max_len_char = 300
-        self.vocab_len_word = 29628
+        self.max_bag_len_word = 300
+        self.max_bag_len_char = 300
+        self.vocab_len_word = 307155
         self.vocab_len_char = 88
         self.char_per_word = 10
         self.embedding_path = "modfile"

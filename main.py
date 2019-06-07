@@ -1,6 +1,6 @@
 # -*- encoding:utf-8 -*-
 import os
-from util.data_process import load_data, load_data_multi_dis, load_tf_idf_data
+from util.data_process import load_data, load_data_multi_dis, load_tf_idf_data, load_bag_data
 from models import models as Models
 from config import Config
 import numpy as np
@@ -23,12 +23,12 @@ def get_data(train_file=None, valid_file=None, test_file=None, flag='train'):
 # 获取包级别的数据
 def get_bag_data(train_file=None, valid_file=None, test_file=None, flag='train'):
     if flag == 'train':
-        x_train, x_train_dis1, x_train_dis2, y_train, vocabulary = load_data(train_file, 'word')
-        x_valid, x_valid_dis1, x_valid_dis2, y_valid, vocabulary = load_data(valid_file, 'word')
-        ids, x_test, x_test_dis1, x_test_dis2, vocabulary = load_data(test_file, 'test')
+        x_train, x_train_dis1, x_train_dis2, y_train, vocabulary = load_bag_data(train_file, 'word')
+        x_valid, x_valid_dis1, x_valid_dis2, y_valid, vocabulary = load_bag_data(valid_file, 'word')
+        ids, x_test, x_test_dis1, x_test_dis2, vocabulary = load_bag_data(test_file, 'test')
         return x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1, x_valid_dis2, y_valid, x_test, x_test_dis1, x_test_dis2, vocabulary, ids
     elif flag == 'test':
-        ids, x_test, disinfos1, disinfos2, vocabulary = load_data(test_file, 'test')
+        ids, x_test, disinfos1, disinfos2, vocabulary = load_bag_data(test_file, 'test')
         return x_test, disinfos1, disinfos2, vocabulary, ids
 
 
@@ -109,6 +109,9 @@ def model_select(model_name, x_train, x_train_dis1, x_train_dis2, y_train, x_val
     if level == 'word':
         # 固定最大长度，多余的截取掉，不足的用0填充
         config.max_len = config.max_len_word
+        config.vocab_len = config.vocab_len_word
+    elif level == 'bag':
+        config.max_len = config.max_bag_len_word
         config.vocab_len = config.vocab_len_word
     else:
         config.max_len = config.max_len_char
@@ -270,6 +273,7 @@ if __name__ == '__main__':
         generate_result(ids, y_test_pred)
 
     elif flag == 'bag':
+        level = 'bag'
 
         x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1, x_valid_dis2, y_valid, x_test, x_test_dis1, x_test_dis2, vocabulary, ids = \
             get_bag_data(train_file='./data/bag_train.txt', valid_file='./data/bag_dev.txt',
