@@ -257,6 +257,23 @@ def generate_result(ids, y_test_pred):
     return
 
 
+# 生成预测结果
+def generate_bag_result(ids, y_test_pred):
+    config = Config()
+    fw = open(config.bag_result_file + '.txt', 'w')
+    t = str(int(time.time()))
+    fw_time = open(config.bag_result_file + '_' + t + '.txt', 'w')
+    line = 0
+    for id in ids:
+        y_test = np.argmax(y_test_pred[line])
+        line += 1
+        fw.write(str(id) + '\t' + str(y_test) + '\n')
+        fw_time.write(str(id) + '\t' + str(y_test) + '\n')
+    fw.close()
+    fw_time.close()
+    return
+
+
 if __name__ == '__main__':
     level = 'word'
     fasttext = False
@@ -332,5 +349,5 @@ if __name__ == '__main__':
                                        x_valid_dis2, y_valid,
                                        x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
 
-        generate_result(ids, y_test_pred)
+        generate_bag_result(ids, y_test_pred)
 
