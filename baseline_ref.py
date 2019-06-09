@@ -26,9 +26,9 @@ tf.app.flags.DEFINE_integer('pos_dim', 5, 'dimension of position embedding')
 tf.app.flags.DEFINE_integer('pos_limit', 30, 'max distance of position embedding')
 tf.app.flags.DEFINE_integer('sen_len', 60, 'sentence length')
 tf.app.flags.DEFINE_integer('window', 3, 'window size')
-tf.app.flags.DEFINE_string('model_path', './models', 'save model dir')
+tf.app.flags.DEFINE_string('model_path', './modfile', 'save model dir')
 tf.app.flags.DEFINE_string('result_path', './results', 'save result dir')
-tf.app.flags.DEFINE_string('data_path', './data', 'data dir to load')
+tf.app.flags.DEFINE_string('data_path', './raw_data/open_data', 'data dir to load')
 tf.app.flags.DEFINE_string('level', 'bag', 'bag level or sentence level, option:bag/sent')
 tf.app.flags.DEFINE_string('model_name', 'cnn', 'model name')
 tf.app.flags.DEFINE_string('loss_type', 'clf', 'loss type')
@@ -168,9 +168,9 @@ class Baseline:
             with open('data/word_level/vocabulary.pkl', 'wb') as vocabulary_pkl:
                 pickle.dump(wordMap, vocabulary_pkl, -1)
                 print(len(wordMap))
-            np.save(open('data/word_level/ccks_300_dim.embeddings', 'wb'), word_embed)
+            np.save(open('./modfile/sst_300_dim_all.embeddings', 'wb'), word_embed)
         else:
-            word_embed = np.load('data/word_level/ccks.embeddings')
+            word_embed = np.load('./modfile/sst_300_dim_all.embeddings')
             with open('data/word_level/vocabulary.pkl', 'rb') as f_vocabulary:
                 wordMap = pickle.load(f_vocabulary)
         return wordMap, word_embed
