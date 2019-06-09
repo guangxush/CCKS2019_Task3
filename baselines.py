@@ -147,7 +147,7 @@ class Baseline:
             return 2 * self.pos_limit + 2
 
     def load_wordVec(self):
-        if not os.path.exists('data/word_level/vocabulary_old.pkl'):
+        if not os.path.exists('data/word_level/vocabulary.pkl'):
             wordMap = {}
             wordMap['PAD'] = len(wordMap)
             wordMap['UNK'] = len(wordMap)
@@ -165,14 +165,16 @@ class Baseline:
             pad_embed = np.random.normal(embed_mean, embed_std, (2, self.word_dim))
             word_embed = np.concatenate((pad_embed, word_embed), axis=0)
             word_embed = word_embed.astype(np.float32)
-            with open('data/word_level/vocabulary_old.pkl', 'wb') as vocabulary_pkl:
+            with open('data/word_level/vocabulary.pkl', 'wb') as vocabulary_pkl:
                 pickle.dump(wordMap, vocabulary_pkl, -1)
                 print(len(wordMap))
-            np.save(open('./modfile/sst_300_dim_all.embeddings', 'wb'), word_embed)
+            np.save(open('data/word_level/ccks_300_dim.embeddings', 'wb'), word_embed)
         else:
-            word_embed = np.load('./modfile/sst_300_dim_all.embeddings')
-            with open('data/word_level/vocabulary_old.pkl', 'rb') as f_vocabulary:
-                wordMap = pickle.load(f_vocabulary)
+            word_embed = np.load('data/word_level/ccks.embeddings')
+            with open('data/word_level/vocabulary.pkl', 'rb') as f_vocabulary:
+                wordMap = pickle.load(f_vocabulary, encoding='bytes')
+            wordMap['PAD'] = 0
+            wordMap['UNK'] = 1
         return wordMap, word_embed
 
     def load_wordMap(self):
@@ -1211,25 +1213,26 @@ class Baseline:
 
 
 def get_word2vec():
+    # -*- coding: utf-8 -*-
     from gensim.models import word2vec
     from gensim.models.word2vec import LineSentence
     import logging, sys
     logger = logging.getLogger(os.path.basename(sys.argv[0]))
     logging.basicConfig(format='%(asctime)s: %(levelname)s: %(message)s')
     logging.root.setLevel(level=logging.INFO)
-
-    sentences = LineSentence('data/word_level/text_corpus.txt')
+    sentences = word2vec.Text8Corpus(os.path.join('data/word_level', 'text_corpus.txt'))  # 加载语料
+    # sentences = LineSentence('data/word_level/text_corpus.txt')
     model = word2vec.Word2Vec(sentences, sg=1, size=300, window=5, min_count=10, negative=5, sample=1e-4,
                               workers=10)
     model.wv.save_word2vec_format('data/word2vec.txt', binary=False)
 
 def word():
-    if not os.path.exists('data/word_level/vocabulary_old.pkl'):
+    if not os.path.exists('data/word_level/vocabulary.pkl'):
         wordMap = {}
         wordMap['PAD'] = len(wordMap)
         wordMap['UNK'] = len(wordMap)
         word_embed = []
-        for line in open('raw_data/open_data/word2vec.txt'):
+        for line in open('data/word2vec.txt'):
             content = line.strip().split()
             if len(content) != 300 + 1:
                 continue
@@ -1243,13 +1246,13 @@ def word():
         # pad_embed = np.random.normal(embed_mean, embed_std, (2, 300))
         # word_embed = np.concatenate((pad_embed, word_embed), axis=0)
         # word_embed = word_embed.astype(np.float32)
-        with open('data/word_level/vocabulary_old.pkl', 'wb') as vocabulary_pkl:
+        with open('data/word_level/vocabulary.pkl', 'wb') as vocabulary_pkl:
             pickle.dump(wordMap, vocabulary_pkl, -1)
             print(len(wordMap))
         # np.save(open('data/word_level/ccks_300_dim.embeddings', 'wb'), word_embed)
     else:
-        word_embed = np.load('modfile/sst_300_dim_all.embeddings')
-        with open('data/word_level/vocabulary_old.pkl', 'rb') as f_vocabulary:
+        word_embed = np.load('data/word_level/ccks_300_dim.embeddings')
+        with open('data/word_level/vocabulary.pkl', 'rb') as f_vocabulary:
             wordMap = pickle.load(f_vocabulary)
     return wordMap, word_embed
 

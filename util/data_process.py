@@ -241,7 +241,7 @@ def load_label(raw_file):
 
 # 获取原始数据
 def load_raw_data(raw_file, test=False):
-    with open('data/word_level/vocabulary.pkl', 'rb') as f_vocabulary:
+    with open('data/word_level/vocabulary_old.pkl', 'rb') as f_vocabulary:
         vocabulary = pickle.load(f_vocabulary)
     if test:
         x = list()
