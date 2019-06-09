@@ -43,3 +43,30 @@ class Config(object):
         self.features = []
         self.classes = 35
         self.classes_multi = 2
+        self.lr = 0.001
+        self.sen_len = 60
+        self.pre_embed = True
+        self.pos_limit = 15
+        self.pos_dim = 5
+        self.window = 3
+        self.word_dim = 300
+        self.hidden_dim = 300
+        self.batch_size = 128
+        self.data_path = './raw_data/open_data'
+        self.model_path = './modfile'
+        self.mode = 'train'
+        self.epochs = 200
+        self.dropout = 0.5
+        self.word_frequency = 5
+        self.level = 'bag'
+
+        if self.level == 'sent':
+            self.bag = False
+        elif self.level == 'bag':
+            self.bag = True
+        else:
+            self.bag = True
+        self.pos_num = 2 * self.pos_limit + 3
+        self.relation2id = self.load_relation()
+        self.num_classes = len(self.relation2id)
+
