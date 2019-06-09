@@ -127,7 +127,7 @@ class Baseline:
         wordMap['PAD'] = len(wordMap)
         wordMap['UNK'] = len(wordMap)
         word_embed = []
-        for line in open(os.path.join(self.data_path, 'word2vec.txt')):
+        for line in open(os.path.join('./modfile/Word2Vec.mod')):
             content = line.strip().split()
             if len(content) != self.word_dim + 1:
                 continue
