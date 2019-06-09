@@ -3,6 +3,7 @@ import tensorflow as tf
 import random
 import os
 import datetime
+import pickle
 from collections import Counter
 
 def set_seed():
@@ -93,6 +94,35 @@ class Baseline:
             return 2 * self.pos_limit + 2
 
     def load_wordVec(self):
+        if not os.path.exists('data/word_level/vocabulary.pkl'):
+            wordMap = {}
+            wordMap['PAD'] = len(wordMap)
+            wordMap['UNK'] = len(wordMap)
+            word_embed = []
+            for line in open(os.path.join(self.data_path, 'word2vec.txt')):
+                content = line.strip().split()
+                if len(content) != self.word_dim + 1:
+                    continue
+                wordMap[content[0]] = len(wordMap)
+                word_embed.append(np.asarray(content[1:], dtype=np.float32))
+
+            word_embed = np.stack(word_embed)
+            embed_mean, embed_std = word_embed.mean(), word_embed.std()
+
+            pad_embed = np.random.normal(embed_mean, embed_std, (2, self.word_dim))
+            word_embed = np.concatenate((pad_embed, word_embed), axis=0)
+            word_embed = word_embed.astype(np.float32)
+            with open('data/word_level/vocabulary.pkl', 'wb') as vocabulary_pkl:
+                pickle.dump(wordMap, vocabulary_pkl, -1)
+                print(len(wordMap))
+            np.save(open('./modfile/sst_300_dim_all.embeddings', 'wb'), word_embed)
+        else:
+            word_embed = np.load('./modfile/sst_300_dim_all.embeddings')
+            with open('data/word_level/vocabulary.pkl', 'rb') as f_vocabulary:
+                wordMap = pickle.load(f_vocabulary)
+        return wordMap, word_embed
+
+    def load_wordVec_old(self):
         wordMap = {}
         wordMap['PAD'] = len(wordMap)
         wordMap['UNK'] = len(wordMap)
