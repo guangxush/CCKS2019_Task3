@@ -24,7 +24,7 @@ gold_label = {'entails': 1, 'neutral': 0}
 def generate_embedding(level):
     data_path = '../data/%s_level' % level
     save_model_file = '../modfile/Word2Vec.mod'
-    save_model_name = '../modfile/sst_300_dim_all.embeddings'
+    save_model_name = '../modfile/ccks_300_dim.embeddings'
     word_size = 300
 
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
@@ -32,7 +32,7 @@ def generate_embedding(level):
     sentences = word2vec.Text8Corpus(os.path.join(data_path, 'text.txt'))  # 加载语料
     # 第一个参数是训练语料，第二个参数是小于该数的单词会被剔除，默认值为5, 第三个参数是神经网络的隐藏层单元数，默认为100
     model = word2vec.Word2Vec(sentences, min_count=1, size=word_size, window=5, workers=4)
-    vocab = pickle.load(open(os.path.join(data_path, 'vocabulary_all.pkl'), 'rb'))
+    vocab = pickle.load(open(os.path.join(data_path, 'vocabulary.pkl'), 'rb'))
     weights = model.wv.syn0
     # 得到词向量字典
     d = dict([(k, v.index) for k, v in model.wv.vocab.items()])
