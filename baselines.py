@@ -1220,7 +1220,7 @@ def get_word2vec():
     logger = logging.getLogger(os.path.basename(sys.argv[0]))
     logging.basicConfig(format='%(asctime)s: %(levelname)s: %(message)s')
     logging.root.setLevel(level=logging.INFO)
-    sentences = word2vec.Text8Corpus(os.path.join('data/word_level', 'text_corpus.txt'))  # 加载语料
+    sentences = word2vec.Text8Corpus(os.path.join('data/word_level', 'text.txt'))  # 加载语料
     # sentences = LineSentence('data/word_level/text_corpus.txt')
     model = word2vec.Word2Vec(sentences, sg=1, size=300, window=5, min_count=10, negative=5, sample=1e-4,
                               workers=10)
