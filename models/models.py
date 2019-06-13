@@ -2,7 +2,7 @@
 
 from keras.engine import Input
 from keras.layers import Embedding, Dropout, Conv1D, Dense, Flatten, Activation, MaxPooling1D, concatenate, \
-    Bidirectional, LSTM, SpatialDropout1D, RepeatVector, Permute, BatchNormalization, multiply, Lambda
+    Bidirectional, LSTM, SpatialDropout1D, RepeatVector, Permute, BatchNormalization, multiply, Lambda, GRU
 from keras.preprocessing.sequence import pad_sequences
 from keras.models import Model
 from models.callbacks import categorical_metrics, categorical_metrics_multi
@@ -14,6 +14,7 @@ from xgboost import XGBClassifier
 from xgboost import plot_importance
 from matplotlib import pyplot
 import xgboost as xgb
+from models.layers import Attention
 
 import os
 import numpy as np
@@ -275,6 +276,25 @@ class Models(object):
         self.model.compile(loss='categorical_crossentropy',
                            optimizer=self.config.optimizer,
                            metrics=['acc'])
+
+    def han(self):
+        sentence = Input(shape=(self.config.sent_max_len, self.config.max_len,), dtype='int32', name='sent_base')
+        dis1 = Input(shape=(self.config.sent_max_len, self.config.max_len,), dtype='float32', name='disinfos1')
+        dis2 = Input(shape=(self.config.sent_max_len, self.config.max_len,), dtype='float32', name='disinfos2')
+        input_text = Input(shape=(self.max_len,))
+        embedding_layer_1 = Embedding(self.weights_1.shape[0], self.weights_1.shape[1], weights=[self.weights_1],
+                                      trainable=self.config.embed_trainable[0])(input_text)
+        embedding_layer_1 = SpatialDropout1D(0.2)(embedding_layer_1)
+        embedding_layer_2 = Embedding(self.weights_2.shape[0], self.weights_2.shape[1], weights=[self.weights_2],
+                                      trainable=self.config.embed_trainable[1])(input_text)
+        embedding_layer_2 = SpatialDropout1D(0.2)(embedding_layer_2)
+        text_embed = concatenate([embedding_layer_1, embedding_layer_2], axis=-1)
+
+        x = SpatialDropout1D(0.2)(text_embed)
+
+        x = Bidirectional(GRU(self.lstm_units, return_sequences=True))(x)
+
+        output_layer = Attention(bias=True)(x)
 
     # bilstm基本demo
     def bilstm_base(self):
