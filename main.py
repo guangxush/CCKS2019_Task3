@@ -177,8 +177,8 @@ def model_bag_select(model_name, x_train, x_train_dis1, x_train_dis2, y_train, x
 
     # 模型训练
     print('Create the ' + model_name + ' model...')
-    if model_name == 'cnn_base_bag':
-        model.cnn_base()
+    if model_name == 'han':
+        model.han()
     elif model_name == 'bilstm_base_bag':
         model.bilstm_base()
     elif model_name == 'cnn':

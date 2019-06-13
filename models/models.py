@@ -281,20 +281,39 @@ class Models(object):
         sentence = Input(shape=(self.config.sent_max_len, self.config.max_len,), dtype='int32', name='sent_base')
         dis1 = Input(shape=(self.config.sent_max_len, self.config.max_len,), dtype='float32', name='disinfos1')
         dis2 = Input(shape=(self.config.sent_max_len, self.config.max_len,), dtype='float32', name='disinfos2')
-        input_text = Input(shape=(self.max_len,))
-        embedding_layer_1 = Embedding(self.weights_1.shape[0], self.weights_1.shape[1], weights=[self.weights_1],
-                                      trainable=self.config.embed_trainable[0])(input_text)
-        embedding_layer_1 = SpatialDropout1D(0.2)(embedding_layer_1)
-        embedding_layer_2 = Embedding(self.weights_2.shape[0], self.weights_2.shape[1], weights=[self.weights_2],
-                                      trainable=self.config.embed_trainable[1])(input_text)
-        embedding_layer_2 = SpatialDropout1D(0.2)(embedding_layer_2)
-        text_embed = concatenate([embedding_layer_1, embedding_layer_2], axis=-1)
 
-        x = SpatialDropout1D(0.2)(text_embed)
+        weights = np.load(os.path.join(self.config.embedding_path, self.config.embedding_file))
+        embedding_layer = Embedding(input_dim=weights.shape[2],
+                                    output_dim=weights.shape[-1],
+                                    weights=[weights], name='embedding_layer', trainable=False)
+        embedding_dis_layer = Embedding(input_dim=self.config.max_len * 2,
+                                        output_dim=5,
+                                        name='embedding_dis_layer', trainable=True)
 
-        x = Bidirectional(GRU(self.lstm_units, return_sequences=True))(x)
+        sent_embedding = embedding_layer(sentence)
+        sent_embedding = SpatialDropout1D(0.2)(sent_embedding)
+        dis1_embedding = embedding_dis_layer(dis1)
+        dis2_emdedding = embedding_dis_layer(dis2)
+        all_input = concatenate([sent_embedding, dis1_embedding, dis2_emdedding], axis=2)
+        filter_length = 3
+        conv_layer = Conv1D(filters=300, kernel_size=filter_length, padding='valid', strides=1, activation='relu')
+        sent_c = conv_layer(all_input)
+        sent_maxpooling = MaxPooling1D(pool_size=self.config.max_len - filter_length + 1)(sent_c)
+        sent_conv = Flatten()(sent_maxpooling)
+        sent_conv = Activation('relu')(sent_conv)
+        sent = Dropout(0.5)(sent_conv)
+        mlp_hidden1 = Dense(128, activation='relu')(sent)
+        mlp_hidden2 = Dense(64, activation='relu')(mlp_hidden1)
+        mlp_hidden2 = Dropout(0.5)(mlp_hidden2)
+        mlp_hidden3 = Dense(32, activation='relu')(mlp_hidden2)
+        output = Dense(self.config.classes, activation='softmax', name='output')(mlp_hidden3)
 
-        output_layer = Attention(bias=True)(x)
+        inputs = [sentence, dis1, dis2]
+        self.model = Model(inputs=inputs, outputs=output)
+        self.model.summary()
+        self.model.compile(loss='categorical_crossentropy',
+                           optimizer=self.config.optimizer,
+                           metrics=['acc'])
 
     # bilstm基本demo
     def bilstm_base(self):
@@ -405,10 +424,48 @@ class Models(object):
                            loss_weights={'output': 1., 'output2': 1.},
                            metrics={'output': ['acc'], 'output2': ['acc']})
 
+    def pad_bag(self, x_data):
+        sent_data = list()
+        for data in x_data:
+            sent_data.append(self.pad(data))
+        return pad_sequences(sent_data, maxlen=self.config.sent_max_len, padding='post', truncating='post')
+
     def pad(self, x_data):
         return pad_sequences(x_data, maxlen=self.config.max_len, padding='post', truncating='post')
 
     def fit(self, x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1, x_valid_dis2, y_valid):
+        x_train = self.pad(x_train)
+        x_train_dis1 = np.array(x_train_dis1)
+        x_train_dis2 = np.array(x_train_dis2)
+
+        x_train_dis1 = self.pad(x_train_dis1)
+        x_train_dis2 = self.pad(x_train_dis2)
+
+        # 结果集one-hot，不能直接使用数字作为标签
+        y_train = to_categorical(y_train)
+
+        x_valid = self.pad(x_valid)
+        x_valid_dis1 = np.array(x_valid_dis1)
+        x_valid_dis2 = np.array(x_valid_dis2)
+
+        x_valid_dis1 = self.pad(x_valid_dis1)
+        x_valid_dis2 = self.pad(x_valid_dis2)
+
+        # 结果集one-hot，不能直接使用数字作为标签
+        y_valid = to_categorical(y_valid)
+
+        # 初始化回调函数并用其训练
+        self.callbacks = []
+        self.init_callbacks()
+        self.model.fit([x_train, x_train_dis1, x_train_dis2], y_train,
+                       epochs=self.config.num_epochs,
+                       verbose=self.config.verbose_training,
+                       batch_size=self.config.batch_size,
+                       validation_data=([x_valid, x_valid_dis1, x_valid_dis2], y_valid),
+                       callbacks=self.callbacks,
+                       class_weight='balanced')
+
+    def fit_bag(self, x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1, x_valid_dis2, y_valid):
         x_train = self.pad(x_train)
         x_train_dis1 = np.array(x_train_dis1)
         x_train_dis2 = np.array(x_train_dis2)
