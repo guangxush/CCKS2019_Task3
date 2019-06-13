@@ -386,16 +386,22 @@ def load_bag_data(raw_file, level):
                 # 单词中加入人物关系坐标
                 per1 = json_data['per1']
                 per2 = json_data['per2']
-
-                words = input.split(' ')
-                disinfo1 = load_distance(words, per1)
-                disinfo2 = load_distance(words, per2)
-
-                x.append([vocabulary.get(word, len(vocabulary) + 1) for word in words if word not in stopwords])
+                sents = input.split('@@@')
+                x_sent = list()
+                x_dissent1 = list()
+                x_dissent2 = list()
+                for sent in sents:
+                    words = sent.split(' ')
+                    disinfo1 = load_distance(words, per1)
+                    disinfo2 = load_distance(words, per2)
+                    x_sent.append([vocabulary.get(word, len(vocabulary) + 1) for word in words if word not in stopwords])
+                    x_dissent1.append(disinfo1)
+                    x_dissent2.append(disinfo2)
+                x.append(x_sent)
                 y.append(float(label))
                 # index -> vector
-                disinfos1.append(disinfo1)
-                disinfos2.append(disinfo2)
+                disinfos1.append(x_dissent1)
+                disinfos2.append(x_dissent2)
 
                 if len(x[-1]) > max_len:
                     max_len = len(x[-1])
@@ -434,10 +440,22 @@ def load_bag_data(raw_file, level):
                 # 单词中加入人物关系坐标
                 per1 = json_data['per1']
                 per2 = json_data['per2']
-                disinfo1 = load_distance(words, per1)
-                disinfo2 = load_distance(words, per2)
-                disinfos1.append(disinfo1)
-                disinfos2.append(disinfo2)
+                sents = input.split('@@@')
+                x_sent = list()
+                x_dissent1 = list()
+                x_dissent2 = list()
+                for sent in sents:
+                    words = sent.split(' ')
+                    disinfo1 = load_distance(words, per1)
+                    disinfo2 = load_distance(words, per2)
+                    x_sent.append(
+                        [vocabulary.get(word, len(vocabulary) + 1) for word in words if word not in stopwords])
+                    x_dissent1.append(disinfo1)
+                    x_dissent2.append(disinfo2)
+                x.append(x_sent)
+                # index -> vector
+                disinfos1.append(x_dissent1)
+                disinfos2.append(x_dissent2)
 
                 if len(x[-1]) > max_len:
                     max_len = len(x[-1])
