@@ -388,8 +388,8 @@ def load_bag_data(raw_file, level):
                 per2 = json_data['per2']
                 sents = input.split('@@@')
                 x_sent = list()
-                x_dissent1 = list()
-                x_dissent2 = list()
+                x_dissent1 = []
+                x_dissent2 = []
                 for sent in sents:
                     words = sent.split(' ')
                     disinfo1 = load_distance(words, per1)
@@ -442,8 +442,8 @@ def load_bag_data(raw_file, level):
                 per2 = json_data['per2']
                 sents = input.split('@@@')
                 x_sent = list()
-                x_dissent1 = list()
-                x_dissent2 = list()
+                x_dissent1 = []
+                x_dissent2 = []
                 for sent in sents:
                     words = sent.split(' ')
                     disinfo1 = load_distance(words, per1)
