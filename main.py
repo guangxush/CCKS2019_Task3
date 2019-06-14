@@ -192,7 +192,7 @@ def model_bag_select(model_name, x_train, x_train_dis1, x_train_dis2, y_train, x
 
     if overwrite or not os.path.exists(os.path.join(config.checkpoint_dir, '%s.hdf5' % model_name)):
         print('Start training the ' + model_name + ' model...')
-        model.fit(x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1, x_valid_dis2, y_valid)
+        model.fit_bag(x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1, x_valid_dis2, y_valid)
     model.load_weight()
     print('Start evaluate the ' + model_name + ' model...')
     y_valid_pred = model.predict(x_valid, x_valid_dis1, x_valid_dis2)
@@ -345,7 +345,7 @@ if __name__ == '__main__':
                          test_file='./data/bag_test.txt', flag='train')
 
         # cnn base model
-        y_test_pred = model_bag_select('cnn_base_bag', x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1,
+        y_test_pred = model_bag_select('han', x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1,
                                        x_valid_dis2, y_valid,
                                        x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
 

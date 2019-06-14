@@ -2,7 +2,8 @@
 
 from keras.engine import Input
 from keras.layers import Embedding, Dropout, Conv1D, Dense, Flatten, Activation, MaxPooling1D, concatenate, \
-    Bidirectional, LSTM, SpatialDropout1D, RepeatVector, Permute, BatchNormalization, multiply, Lambda, GRU, TimeDistributed
+    Bidirectional, LSTM, SpatialDropout1D, RepeatVector, Permute, BatchNormalization, multiply, Lambda, GRU, \
+    TimeDistributed, GlobalMaxPooling1D, Conv2D, Reshape
 from keras.preprocessing.sequence import pad_sequences
 from keras.models import Model
 from models.callbacks import categorical_metrics, categorical_metrics_multi
@@ -283,7 +284,7 @@ class Models(object):
         dis2 = Input(shape=(self.config.sent_max_len, self.config.max_len,), dtype='float32', name='disinfos2')
 
         weights = np.load(os.path.join(self.config.embedding_path, self.config.embedding_file))
-        embedding_layer = Embedding(input_dim=weights.shape[2],
+        embedding_layer = Embedding(input_dim=weights.shape[0],
                                     output_dim=weights.shape[-1],
                                     weights=[weights], name='embedding_layer', trainable=False)
         embedding_dis_layer = Embedding(input_dim=self.config.max_len * 2,
@@ -291,14 +292,23 @@ class Models(object):
                                         name='embedding_dis_layer', trainable=True)
 
         sent_embedding = TimeDistributed(embedding_layer)(sentence)
-        sent_embedding = SpatialDropout1D(0.2)(sent_embedding)
+        sent_cnn = TimeDistributed(Conv1D(self.config.max_len, 2, activation='relu', padding='valid'))(sent_embedding)
+        sent_max_pool = TimeDistributed(GlobalMaxPooling1D())(sent_cnn)
+        sent_max_pool = Dropout(0.5)(sent_max_pool)
         dis1_embedding = TimeDistributed(embedding_dis_layer)(dis1)
-        dis2_emdedding = TimeDistributed(embedding_dis_layer)(dis2)
-        all_input = concatenate([sent_embedding, dis1_embedding, dis2_emdedding], axis=2)
+        # dis1_embedding = TimeDistributed(Conv1D(self.config.sent_max_len, 2, activation='relu', padding='valid'))(dis1_embedding)
+        dis1_embedding = TimeDistributed(GlobalMaxPooling1D())(dis1_embedding)
+
+        dis2_embedding = TimeDistributed(embedding_dis_layer)(dis2)
+        # dis2_embedding = TimeDistributed(Conv1D(self.config.sent_max_len, 2, activation='relu', padding='valid'))(dis2_embedding)
+        dis2_embedding = TimeDistributed(GlobalMaxPooling1D())(dis2_embedding)
+        all_input = concatenate([sent_max_pool, dis1_embedding, dis2_embedding], axis=-1)
         filter_length = 3
         conv_layer = Conv1D(filters=300, kernel_size=filter_length, padding='valid', strides=1, activation='relu')
+        # all_input = Flatten()(all_input)
+        # all_input = Reshape((310*6))(all_input)
         sent_c = conv_layer(all_input)
-        sent_maxpooling = MaxPooling1D(pool_size=self.config.max_len - filter_length + 1)(sent_c)
+        sent_maxpooling = MaxPooling1D(pool_size=K.int_shape(sent_c)[1])(sent_c)
         sent_conv = Flatten()(sent_maxpooling)
         sent_conv = Activation('relu')(sent_conv)
         sent = Dropout(0.5)(sent_conv)
