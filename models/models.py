@@ -476,22 +476,22 @@ class Models(object):
                        class_weight='balanced')
 
     def fit_bag(self, x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1, x_valid_dis2, y_valid):
-        x_train = self.pad(x_train)
+        x_train = self.pad_bag(x_train)
         x_train_dis1 = np.array(x_train_dis1)
         x_train_dis2 = np.array(x_train_dis2)
 
-        x_train_dis1 = self.pad(x_train_dis1)
-        x_train_dis2 = self.pad(x_train_dis2)
+        x_train_dis1 = self.pad_bag(x_train_dis1)
+        x_train_dis2 = self.pad_bag(x_train_dis2)
 
         # 结果集one-hot，不能直接使用数字作为标签
         y_train = to_categorical(y_train)
 
-        x_valid = self.pad(x_valid)
+        x_valid = self.pad_bag(x_valid)
         x_valid_dis1 = np.array(x_valid_dis1)
         x_valid_dis2 = np.array(x_valid_dis2)
 
-        x_valid_dis1 = self.pad(x_valid_dis1)
-        x_valid_dis2 = self.pad(x_valid_dis2)
+        x_valid_dis1 = self.pad_bag(x_valid_dis1)
+        x_valid_dis2 = self.pad_bag(x_valid_dis2)
 
         # 结果集one-hot，不能直接使用数字作为标签
         y_valid = to_categorical(y_valid)
