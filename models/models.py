@@ -2,7 +2,7 @@
 
 from keras.engine import Input
 from keras.layers import Embedding, Dropout, Conv1D, Dense, Flatten, Activation, MaxPooling1D, concatenate, \
-    Bidirectional, LSTM, SpatialDropout1D, RepeatVector, Permute, BatchNormalization, multiply, Lambda, GRU
+    Bidirectional, LSTM, SpatialDropout1D, RepeatVector, Permute, BatchNormalization, multiply, Lambda, GRU, TimeDistributed
 from keras.preprocessing.sequence import pad_sequences
 from keras.models import Model
 from models.callbacks import categorical_metrics, categorical_metrics_multi
@@ -290,10 +290,10 @@ class Models(object):
                                         output_dim=5,
                                         name='embedding_dis_layer', trainable=True)
 
-        sent_embedding = embedding_layer(sentence)
+        sent_embedding = TimeDistributed(embedding_layer)(sentence)
         sent_embedding = SpatialDropout1D(0.2)(sent_embedding)
-        dis1_embedding = embedding_dis_layer(dis1)
-        dis2_emdedding = embedding_dis_layer(dis2)
+        dis1_embedding = TimeDistributed(embedding_dis_layer)(dis1)
+        dis2_emdedding = TimeDistributed(embedding_dis_layer)(dis2)
         all_input = concatenate([sent_embedding, dis1_embedding, dis2_emdedding], axis=2)
         filter_length = 3
         conv_layer = Conv1D(filters=300, kernel_size=filter_length, padding='valid', strides=1, activation='relu')
