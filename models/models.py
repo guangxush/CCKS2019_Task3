@@ -3,7 +3,7 @@
 from keras.engine import Input
 from keras.layers import Embedding, Dropout, Conv1D, Dense, Flatten, Activation, MaxPooling1D, concatenate, \
     Bidirectional, LSTM, SpatialDropout1D, RepeatVector, Permute, BatchNormalization, multiply, Lambda, GRU, \
-    TimeDistributed, GlobalMaxPooling1D, Conv2D, Reshape
+    TimeDistributed, GlobalMaxPooling1D, Conv2D, Reshape, MaxPooling2D
 from keras.preprocessing.sequence import pad_sequences
 from keras.models import Model
 from models.callbacks import categorical_metrics, categorical_metrics_multi
@@ -309,6 +309,44 @@ class Models(object):
         # all_input = Reshape((310*6))(all_input)
         sent_c = conv_layer(all_input)
         sent_maxpooling = MaxPooling1D(pool_size=K.int_shape(sent_c)[1])(sent_c)
+        sent_conv = Flatten()(sent_maxpooling)
+        sent_conv = Activation('relu')(sent_conv)
+        sent = Dropout(0.5)(sent_conv)
+        mlp_hidden1 = Dense(128, activation='relu')(sent)
+        mlp_hidden2 = Dense(64, activation='relu')(mlp_hidden1)
+        mlp_hidden2 = Dropout(0.5)(mlp_hidden2)
+        mlp_hidden3 = Dense(32, activation='relu')(mlp_hidden2)
+        output = Dense(self.config.classes, activation='softmax', name='output')(mlp_hidden3)
+
+        inputs = [sentence, dis1, dis2]
+        self.model = Model(inputs=inputs, outputs=output)
+        self.model.summary()
+        self.model.compile(loss='categorical_crossentropy',
+                           optimizer=self.config.optimizer,
+                           metrics=['acc'])
+
+    def han_cnn(self):
+        sentence = Input(shape=(self.config.sent_max_len, self.config.max_len,), dtype='int32', name='sent_base')
+        dis1 = Input(shape=(self.config.sent_max_len, self.config.max_len,), dtype='float32', name='disinfos1')
+        dis2 = Input(shape=(self.config.sent_max_len, self.config.max_len,), dtype='float32', name='disinfos2')
+
+        weights = np.load(os.path.join(self.config.embedding_path, self.config.embedding_file))
+        embedding_layer = Embedding(input_dim=weights.shape[0],
+                                    output_dim=weights.shape[-1],
+                                    weights=[weights], name='embedding_layer', trainable=False)
+        embedding_dis_layer = Embedding(input_dim=self.config.max_len * 2,
+                                        output_dim=5,
+                                        name='embedding_dis_layer', trainable=True)
+
+        sent_embedding = TimeDistributed(embedding_layer)(sentence)
+        dis1_embedding = TimeDistributed(embedding_dis_layer)(dis1)
+        dis2_embedding = TimeDistributed(embedding_dis_layer)(dis2)
+
+        all_input = concatenate([sent_embedding, dis1_embedding, dis2_embedding], axis=-1)
+        filter_length = 3
+        conv_layer = Conv2D(filters=300, kernel_size=filter_length, padding='valid', strides=1, activation='relu')
+        sent_c = conv_layer(all_input)
+        sent_maxpooling = MaxPooling2D(pool_size=K.int_shape(sent_c)[1])(sent_c)
         sent_conv = Flatten()(sent_maxpooling)
         sent_conv = Activation('relu')(sent_conv)
         sent = Dropout(0.5)(sent_conv)
