@@ -1,7 +1,7 @@
 # -*- coding:utf-8 -*-
 import codecs
 import json
-import sys
+from tqdm import tqdm
 
 
 # 将多个文件的训练数据合并转化成json格式便于处理
@@ -128,13 +128,29 @@ def word_corpus_generate(train_file, dev_file, test_file, out_file):
     return
 
 
+# 生成小样本实验的数据集
+def generate_reinforcement_data(raw_file, out_file):
+    with codecs.open(raw_file, encoding='utf-8') as f_train, codecs.open(out_file, 'w', encoding='utf-8') as fw:
+        lines = f_train.readlines()
+        print(lines[0])
+        for line in tqdm(lines):
+            json_data = json.loads(line)
+            input = json_data['sent']
+            label = json_data['label']
+            # 31 4这种标签单独处理
+            if len(label.split(' ')) > 1:
+                label = label.split(' ')[0]
+            fw.write("\""+str(label)+"\","+"\""+input+"\"\n")
+    return
+
+
 if __name__ == '__main__':
     # zero的数据上限
     zero_threshold = 3000
     # data_analysis('../raw_data/open_data/sent_relation_train.txt')
     # 产生内部的词库
     # word_corpus_generate('../raw_data/open_data/sent_train.txt', '../raw_data/open_data/sent_dev.txt', '../raw_data/open_data/sent_test.txt', '../data/word_level/corpus_raw.txt')
-    flag = 'bag'
+    flag = 'reinforce'
     # 多任务方法
     if flag == 'multi':
         # train file
@@ -193,6 +209,14 @@ if __name__ == '__main__':
         label_file = '../raw_data/open_data/bag_relation_test.txt'
         out_file = '../data/bag_test.txt'
         generate_json_bag_data(sent_file, label_file, out_file, flag='test')
+    elif flag == "reinforce":
+        train_file = '../data/sent_train.txt'
+        out_file = '../data/train.csv'
+        generate_reinforcement_data(raw_file=train_file, out_file=out_file)
+
+        dev_file = '../data/sent_dev.txt'
+        out_file = '../data/test.csv'
+        generate_reinforcement_data(raw_file=dev_file, out_file=out_file)
 
 
 
