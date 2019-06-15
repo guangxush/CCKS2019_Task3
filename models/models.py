@@ -502,7 +502,7 @@ class Models(object):
         self.model.fit([x_train, x_train_dis1, x_train_dis2], y_train,
                        epochs=self.config.num_epochs,
                        verbose=self.config.verbose_training,
-                       batch_size=self.config.batch_size,
+                       batch_size=self.config.bag_batch_size,
                        validation_data=([x_valid, x_valid_dis1, x_valid_dis2], y_valid),
                        callbacks=self.callbacks,
                        class_weight='balanced')
