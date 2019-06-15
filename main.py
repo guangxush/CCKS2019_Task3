@@ -338,8 +338,6 @@ if __name__ == '__main__':
         generate_result(ids, y_test_pred)
 
     elif flag == 'bag':
-        level = 'bag'
-
         x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1, x_valid_dis2, y_valid, x_test, x_test_dis1, x_test_dis2, vocabulary, ids = \
             get_bag_data(train_file='./data/bag_train.txt', valid_file='./data/bag_dev.txt',
                          test_file='./data/bag_test.txt', flag='train')
