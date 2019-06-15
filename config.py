@@ -10,7 +10,7 @@ class Config(object):
         self.embedding_path = None
         self.embedding_path_word = None
         self.embedding_path_char = None
-        self.sent_max_len = 6
+        self.sent_max_len = 3
         self.max_len = None
         self.vocab_len = None
         self.num_epochs = 50  # 100
