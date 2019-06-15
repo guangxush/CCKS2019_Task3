@@ -292,7 +292,7 @@ class Models(object):
                                         name='embedding_dis_layer', trainable=True)
 
         sent_embedding = TimeDistributed(embedding_layer)(sentence)
-        sent_cnn = TimeDistributed(Conv1D(self.config.max_len, 2, activation='relu', padding='valid'))(sent_embedding)
+        sent_cnn = TimeDistributed(Conv1D(filters=300, kernel_size=2, activation='relu', padding='valid'))(sent_embedding)
         sent_max_pool = TimeDistributed(GlobalMaxPooling1D())(sent_cnn)
         sent_max_pool = Dropout(0.5)(sent_max_pool)
         dis1_embedding = TimeDistributed(embedding_dis_layer)(dis1)
@@ -338,9 +338,9 @@ class Models(object):
                                         output_dim=5,
                                         name='embedding_dis_layer', trainable=True)
 
-        sent_embedding = TimeDistributed(Dense(self.config.sent_max_len), input_shape=(self.config.sent_max_len, self.config.max_len))(sentence)
-        dis1_embedding = TimeDistributed(Dense(self.config.sent_max_len), input_shape=(self.config.sent_max_len, self.config.max_len))(embedding_layer)
-        dis2_embedding = TimeDistributed(Dense(self.config.sent_max_len), input_shape=(self.config.sent_max_len, self.config.max_len))(embedding_dis_layer)
+        sent_embedding = TimeDistributed(Dense(self.config.sent_max_len), dtype='int32', input_shape=(self.config.sent_max_len, self.config.max_len))(sentence)
+        dis1_embedding = TimeDistributed(Dense(self.config.sent_max_len), dtype='float32', input_shape=(self.config.sent_max_len, self.config.max_len))(embedding_layer)
+        dis2_embedding = TimeDistributed(Dense(self.config.sent_max_len), dtype='float32', input_shape=(self.config.sent_max_len, self.config.max_len))(embedding_dis_layer)
         all_input = concatenate([sent_embedding, dis1_embedding, dis2_embedding], axis=-1)
         filter_length = 3
         conv_layer = Conv1D(filters=300, kernel_size=filter_length, padding='valid', strides=1, activation='relu')
