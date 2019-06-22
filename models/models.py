@@ -8,7 +8,7 @@ from keras.preprocessing.sequence import pad_sequences
 from keras.models import Model
 from models.callbacks import categorical_metrics, categorical_metrics_multi
 from keras.callbacks import ModelCheckpoint, EarlyStopping, CSVLogger
-
+import tensorflow as tf
 from sklearn.metrics import precision_score, recall_score, accuracy_score
 from keras.utils import to_categorical
 from xgboost import XGBClassifier
@@ -328,20 +328,19 @@ class Models(object):
 
     def han_yang(self):
         sentence = Input(shape=(self.config.sent_max_len, self.config.max_len,), dtype='int32', name='sent_base')
-        dis1 = Input(shape=(self.config.sent_max_len, self.config.max_len,), dtype='float32', name='disinfos1')
-        dis2 = Input(shape=(self.config.sent_max_len, self.config.max_len,), dtype='float32', name='disinfos2')
+        dis1 = Input(shape=(self.config.sent_max_len, self.config.max_len,), dtype='int32', name='disinfos1')
+        dis2 = Input(shape=(self.config.sent_max_len, self.config.max_len,), dtype='int32', name='disinfos2')
 
-        sent_encoded = TimeDistributed(self.word_encoder())(sentence)  # word encoder
-        dis1_encoded = TimeDistributed(self.dis_encoder())(dis1)  # dis1 encoder
-        dis2_encoded = TimeDistributed(self.dis_encoder())(dis2)  # dis2 encoder
-        sent_encoded = concatenate([sent_encoded, dis1_encoded, dis2_encoded], axis=-1)
+        concat = concatenate([sentence, dis1, dis2], axis=-1)
+        sent_encoded = TimeDistributed(self.word_encoder())(concat)  # word encoder
+
         sent_vectors = TimeDistributed(SelfAttention(bias=True))(sent_encoded)  # word attention
 
         doc_encoded = self.sentence_encoder()(sent_vectors)  # sentence encoder
         doc_vector = SelfAttention(bias=True)(doc_encoded)  # sentence attention
 
         dense_layer = Dense(256, activation='relu')(doc_vector)
-        output = Dense(self.n_class, activation='softmax')(dense_layer)
+        output = Dense(self.config.classes, activation='softmax')(dense_layer)
 
         inputs = [sentence, dis1, dis2]
         self.model = Model(inputs=inputs, outputs=output)
@@ -351,21 +350,23 @@ class Models(object):
                            metrics=['acc'])
 
     def word_encoder(self):
-        input_words = Input(shape=(self.config.max_len,))
+        input = Input(shape=(self.config.max_len * 3,))
+        input_words, dis1, dis2 = Lambda(lambda x: tf.split(x, 3, axis=-1))(input)
         weights = np.load(os.path.join(self.config.embedding_path, self.config.embedding_file))
+
         word_vectors = Embedding(input_dim=weights.shape[0],
                                  output_dim=weights.shape[-1],
                                  weights=[weights], name='embedding_layer', trainable=False)(input_words)
-        sent_encoded = Bidirectional(GRU(300, return_sequences=True))(word_vectors)
-        return Model(input_words, sent_encoded)
 
-    def dis_encoder(self):
-        input_words = Input(shape=(self.config.max_len,))
-        word_vectors = Embedding(input_dim=self.config.max_len * 2,
-                                 output_dim=5,
-                                 name='embedding_dis_layer', trainable=True)
-        sent_encoded = Bidirectional(GRU(self.config.rnn_units, return_sequences=True))(word_vectors)
-        return Model(input_words, sent_encoded)
+        dis_vectors = Embedding(input_dim=self.config.max_len * 2,
+                                output_dim=50,
+                                name='embedding_dis_layer', trainable=True)
+        dis1_vector = dis_vectors(dis1)
+        dis2_vector = dis_vectors(dis2)
+
+        sent_encoded = concatenate([word_vectors, dis1_vector, dis2_vector], axis=-1)
+        sent_encoded = Bidirectional(GRU(self.config.rnn_units, return_sequences=True))(sent_encoded)
+        return Model(input, sent_encoded)
 
     def sentence_encoder(self):
         input_sents = Input(shape=(self.config.sent_max_len, self.config.rnn_units * 2))
@@ -685,6 +686,16 @@ class Models(object):
         pyplot.show()
         xgb_model.save_model('./modfile/tf_idf_XGBoost.model')
         return xgb_model, x_valid, y_valid
+
+    def predict_bag(self, x, x_dis1, x_dis2):
+        x_train = self.pad_bag(x)
+        x_train_dis1 = np.array(x_dis1)
+        x_train_dis2 = np.array(x_dis2)
+
+        x_train_dis1 = self.pad_bag(x_train_dis1)
+        x_train_dis2 = self.pad_bag(x_train_dis2)
+        y_pred = self.model.predict([x_train, x_train_dis1, x_train_dis2], batch_size=100, verbose=1)
+        return y_pred
 
     def predict(self, x, x_dis1, x_dis2):
         x = self.pad(x)

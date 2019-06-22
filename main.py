@@ -195,8 +195,8 @@ def model_bag_select(model_name, x_train, x_train_dis1, x_train_dis2, y_train, x
         model.fit_bag(x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1, x_valid_dis2, y_valid)
     model.load_weight()
     print('Start evaluate the ' + model_name + ' model...')
-    y_valid_pred = model.predict(x_valid, x_valid_dis1, x_valid_dis2)
-    y_test_pred = model.predict(x_test, x_test_dis1, x_test_dis2)
+    y_valid_pred = model.predict_bag(x_valid, x_valid_dis1, x_valid_dis2)
+    y_test_pred = model.predict_bag(x_test, x_test_dis1, x_test_dis2)
     model.evaluate(model_name, y_valid_pred, y_valid)
     print('Start generate the ' + model_name + ' model...')
 

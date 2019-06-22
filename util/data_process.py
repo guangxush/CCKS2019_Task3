@@ -434,8 +434,6 @@ def load_bag_data(raw_file, level):
                 input = json_data['sent']
                 test_id = json_data['id'].strip('\"')
                 ids.append(test_id)
-                words = input.split(' ')
-                x.append([vocabulary.get(word, len(vocabulary) + 1) for word in words if word not in stopwords])
 
                 # 单词中加入人物关系坐标
                 per1 = json_data['per1']
