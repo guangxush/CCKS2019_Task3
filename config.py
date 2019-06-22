@@ -17,7 +17,7 @@ class Config(object):
         self.learning_rate = 0.001
         self.optimizer = "adam"
         self.batch_size = 128
-        self.bag_batch_size = 10
+        self.bag_batch_size = 128
         self.verbose_training = 1
         self.checkpoint_monitor = "val_f1"
         self.checkpoint_mode = "max"
