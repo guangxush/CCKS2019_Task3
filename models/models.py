@@ -331,16 +331,16 @@ class Models(object):
         dis1 = Input(shape=(self.config.sent_max_len, self.config.max_len,), dtype='int32', name='disinfos1')
         dis2 = Input(shape=(self.config.sent_max_len, self.config.max_len,), dtype='int32', name='disinfos2')
 
+        # 先合并，在拆分
         concat = concatenate([sentence, dis1, dis2], axis=-1)
         sent_encoded = TimeDistributed(self.word_encoder())(concat)  # word encoder
-
         sent_vectors = TimeDistributed(SelfAttention(bias=True))(sent_encoded)  # word attention
 
         doc_encoded = self.sentence_encoder()(sent_vectors)  # sentence encoder
         doc_vector = SelfAttention(bias=True)(doc_encoded)  # sentence attention
 
         dense_layer = Dense(256, activation='relu')(doc_vector)
-        output = Dense(self.config.classes, activation='softmax')(dense_layer)
+        output = Dense(self.config.classes, activation='softmax', name='output')(dense_layer)
 
         inputs = [sentence, dis1, dis2]
         self.model = Model(inputs=inputs, outputs=output)
@@ -351,26 +351,30 @@ class Models(object):
 
     def word_encoder(self):
         input = Input(shape=(self.config.max_len * 3,))
+        # 切分输入
         input_words, dis1, dis2 = Lambda(lambda x: tf.split(x, 3, axis=-1))(input)
-        weights = np.load(os.path.join(self.config.embedding_path, self.config.embedding_file))
 
+        # 字向量
+        weights = np.load(os.path.join(self.config.embedding_path, self.config.embedding_file))
         word_vectors = Embedding(input_dim=weights.shape[0],
                                  output_dim=weights.shape[-1],
                                  weights=[weights], name='embedding_layer', trainable=False)(input_words)
-
+        # 位置向量
         dis_vectors = Embedding(input_dim=self.config.max_len * 2,
-                                output_dim=50,
+                                output_dim=self.config.dis_len,
                                 name='embedding_dis_layer', trainable=True)
         dis1_vector = dis_vectors(dis1)
         dis2_vector = dis_vectors(dis2)
 
         sent_encoded = concatenate([word_vectors, dis1_vector, dis2_vector], axis=-1)
+        # 双向GRU
         sent_encoded = Bidirectional(GRU(self.config.rnn_units, return_sequences=True))(sent_encoded)
         return Model(input, sent_encoded)
 
     def sentence_encoder(self):
         input_sents = Input(shape=(self.config.sent_max_len, self.config.rnn_units * 2))
         sents_masked = Masking()(input_sents)  # support masking
+        # 双向GRU
         doc_encoded = Bidirectional(GRU(self.config.rnn_units, return_sequences=True))(sents_masked)
         return Model(input_sents, doc_encoded)
 

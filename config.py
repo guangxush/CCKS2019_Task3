@@ -28,6 +28,7 @@ class Config(object):
         self.early_stopping_patience = 5
         self.early_stopping_mode = 'max'
         self.max_len_word = 60
+        self.dis_len = 50
         self.max_len_char = 300
         self.max_bag_len_word = 300
         self.max_bag_len_char = 300
