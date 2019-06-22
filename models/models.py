@@ -3,7 +3,7 @@
 from keras.engine import Input
 from keras.layers import Embedding, Dropout, Conv1D, Dense, Flatten, Activation, MaxPooling1D, concatenate, \
     Bidirectional, LSTM, SpatialDropout1D, RepeatVector, Permute, BatchNormalization, multiply, Lambda, GRU, \
-    TimeDistributed, GlobalMaxPooling1D, Conv2D, Reshape, MaxPooling2D
+    TimeDistributed, GlobalMaxPooling1D, Conv2D, Reshape, MaxPooling2D, Masking
 from keras.preprocessing.sequence import pad_sequences
 from keras.models import Model
 from models.callbacks import categorical_metrics, categorical_metrics_multi
@@ -15,7 +15,7 @@ from xgboost import XGBClassifier
 from xgboost import plot_importance
 from matplotlib import pyplot
 import xgboost as xgb
-from models.layers import Attention
+from models.layers import SelfAttention
 
 import os
 import numpy as np
@@ -292,7 +292,8 @@ class Models(object):
                                         name='embedding_dis_layer', trainable=True)
 
         sent_embedding = TimeDistributed(embedding_layer)(sentence)
-        sent_cnn = TimeDistributed(Conv1D(filters=300, kernel_size=2, activation='relu', padding='valid'))(sent_embedding)
+        sent_cnn = TimeDistributed(Conv1D(filters=300, kernel_size=2, activation='relu', padding='valid'))(
+            sent_embedding)
         sent_max_pool = TimeDistributed(GlobalMaxPooling1D())(sent_cnn)
         sent_max_pool = Dropout(0.5)(sent_max_pool)
         dis1_embedding = TimeDistributed(embedding_dis_layer)(dis1)
@@ -324,6 +325,53 @@ class Models(object):
         self.model.compile(loss='categorical_crossentropy',
                            optimizer=self.config.optimizer,
                            metrics=['acc'])
+
+    def han_yang(self):
+        sentence = Input(shape=(self.config.sent_max_len, self.config.max_len,), dtype='int32', name='sent_base')
+        dis1 = Input(shape=(self.config.sent_max_len, self.config.max_len,), dtype='float32', name='disinfos1')
+        dis2 = Input(shape=(self.config.sent_max_len, self.config.max_len,), dtype='float32', name='disinfos2')
+
+        sent_encoded = TimeDistributed(self.word_encoder())(sentence)  # word encoder
+        dis1_encoded = TimeDistributed(self.dis_encoder())(dis1)  # dis1 encoder
+        dis2_encoded = TimeDistributed(self.dis_encoder())(dis2)  # dis2 encoder
+        sent_encoded = concatenate([sent_encoded, dis1_encoded, dis2_encoded], axis=-1)
+        sent_vectors = TimeDistributed(SelfAttention(bias=True))(sent_encoded)  # word attention
+
+        doc_encoded = self.sentence_encoder()(sent_vectors)  # sentence encoder
+        doc_vector = SelfAttention(bias=True)(doc_encoded)  # sentence attention
+
+        dense_layer = Dense(256, activation='relu')(doc_vector)
+        output = Dense(self.n_class, activation='softmax')(dense_layer)
+
+        inputs = [sentence, dis1, dis2]
+        self.model = Model(inputs=inputs, outputs=output)
+        self.model.summary()
+        self.model.compile(loss='categorical_crossentropy',
+                           optimizer=self.config.optimizer,
+                           metrics=['acc'])
+
+    def word_encoder(self):
+        input_words = Input(shape=(self.config.max_len,))
+        weights = np.load(os.path.join(self.config.embedding_path, self.config.embedding_file))
+        word_vectors = Embedding(input_dim=weights.shape[0],
+                                 output_dim=weights.shape[-1],
+                                 weights=[weights], name='embedding_layer', trainable=False)(input_words)
+        sent_encoded = Bidirectional(GRU(300, return_sequences=True))(word_vectors)
+        return Model(input_words, sent_encoded)
+
+    def dis_encoder(self):
+        input_words = Input(shape=(self.config.max_len,))
+        word_vectors = Embedding(input_dim=self.config.max_len * 2,
+                                 output_dim=5,
+                                 name='embedding_dis_layer', trainable=True)
+        sent_encoded = Bidirectional(GRU(self.config.rnn_units, return_sequences=True))(word_vectors)
+        return Model(input_words, sent_encoded)
+
+    def sentence_encoder(self):
+        input_sents = Input(shape=(self.config.sent_max_len, self.config.rnn_units * 2))
+        sents_masked = Masking()(input_sents)  # support masking
+        doc_encoded = Bidirectional(GRU(self.config.rnn_units, return_sequences=True))(sents_masked)
+        return Model(input_sents, doc_encoded)
 
     def han_cnn(self):
         sentence = Input(shape=(self.config.sent_max_len, self.config.max_len,), dtype='int32', name='sent_base')
@@ -376,9 +424,13 @@ class Models(object):
                                         output_dim=5,
                                         name='embedding_dis_layer', trainable=True)
 
-        sent_embedding = TimeDistributed(Dense(self.config.sent_max_len), dtype='int32', input_shape=(self.config.sent_max_len, self.config.max_len))(sentence)
-        dis1_embedding = TimeDistributed(Dense(self.config.sent_max_len), dtype='float32', input_shape=(self.config.sent_max_len, self.config.max_len))(embedding_layer)
-        dis2_embedding = TimeDistributed(Dense(self.config.sent_max_len), dtype='float32', input_shape=(self.config.sent_max_len, self.config.max_len))(embedding_dis_layer)
+        sent_embedding = TimeDistributed(Dense(self.config.sent_max_len), dtype='int32',
+                                         input_shape=(self.config.sent_max_len, self.config.max_len))(sentence)
+        dis1_embedding = TimeDistributed(Dense(self.config.sent_max_len), dtype='float32',
+                                         input_shape=(self.config.sent_max_len, self.config.max_len))(embedding_layer)
+        dis2_embedding = TimeDistributed(Dense(self.config.sent_max_len), dtype='float32',
+                                         input_shape=(self.config.sent_max_len, self.config.max_len))(
+            embedding_dis_layer)
         all_input = concatenate([sent_embedding, dis1_embedding, dis2_embedding], axis=-1)
         filter_length = 3
         conv_layer = Conv1D(filters=300, kernel_size=filter_length, padding='valid', strides=1, activation='relu')

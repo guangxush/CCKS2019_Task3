@@ -45,3 +45,4 @@ class Config(object):
         self.features = []
         self.classes = 35
         self.classes_multi = 2
+        self.rnn_units = 300

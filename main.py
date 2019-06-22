@@ -183,8 +183,8 @@ def model_bag_select(model_name, x_train, x_train_dis1, x_train_dis2, y_train, x
         model.han_base()
     elif model_name == 'han_cnn':
         model.han_cnn()
-    elif model_name == 'lstm_attention_bag':
-        model.lstm_attention()
+    elif model_name == 'han_yang':
+        model.han_yang()
     elif model_name == 'mlp_bag':
         model.mlp()
     else:
@@ -343,7 +343,7 @@ if __name__ == '__main__':
                          test_file='./data/bag_test.txt', flag='train')
 
         # cnn base model
-        y_test_pred = model_bag_select('han_cnn', x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1,
+        y_test_pred = model_bag_select('han_yang', x_train, x_train_dis1, x_train_dis2, y_train, x_valid, x_valid_dis1,
                                        x_valid_dis2, y_valid,
                                        x_test, x_test_dis1, x_test_dis2, level, overwrite=overwrite)
 
